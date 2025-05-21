@@ -1,6 +1,17 @@
 import React, { createContext, useEffect, useState, ReactNode } from "react";
 import { apiRequest } from "./queryClient";
-import { User } from "@shared/schema";
+
+// Define User type directly to avoid import issues
+interface User {
+  id: number;
+  name: string | null;
+  email: string;
+  image: string | null;
+  zip: string | null;
+  about: string | null;
+  authType: string;
+  authId: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -41,11 +52,20 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
       } catch (error) {
         console.error("Failed to check authentication:", error);
       } finally {
+        // Always set to false to prevent infinite loading
         setIsInitializing(false);
       }
     };
 
-    checkAuth();
+    // Add a timeout to ensure we don't get stuck in loading state
+    const timeoutId = setTimeout(() => {
+      setIsInitializing(false);
+      console.log("Auth check timed out, proceeding with null user");
+    }, 5000);
+    
+    checkAuth().then(() => clearTimeout(timeoutId));
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const signIn = async (provider: "google" | "facebook") => {
