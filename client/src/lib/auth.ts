@@ -22,7 +22,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider(props: AuthProviderProps): React.ReactElement {
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -100,17 +100,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
   
-  return React.createElement(
-    AuthContext.Provider,
-    { 
-      value: {
-        user,
-        isInitializing,
-        isAuthenticated: !!user,
-        signIn,
-        signOut
-      }
-    },
-    children
+  const contextValue = {
+    user,
+    isInitializing,
+    isAuthenticated: !!user,
+    signIn,
+    signOut
+  };
+  
+  return (
+    React.createElement(
+      AuthContext.Provider,
+      { value: contextValue },
+      props.children
+    )
   );
 }

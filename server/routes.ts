@@ -14,14 +14,47 @@ if (!process.env.STRIPE_SECRET_KEY) {
   console.warn("Missing STRIPE_SECRET_KEY. Stripe payments won't work.");
 }
 
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-}) : null;
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // Platform fee percentage (15%)
 const PLATFORM_FEE_PERCENT = 15;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Stripe payment endpoint for creating payment intent
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe is not configured." });
+      }
+
+      const { listingId, quantity, amount } = req.body;
+      
+      if (!listingId || !quantity || !amount) {
+        return res.status(400).json({ message: "Missing required fields." });
+      }
+      
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount),
+        currency: "usd",
+        // Store metadata about the purchase
+        metadata: {
+          listingId: listingId.toString(),
+          quantity: quantity.toString()
+        }
+      });
+      
+      res.status(200).json({
+        clientSecret: paymentIntent.client_secret
+      });
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ 
+        message: "Failed to create payment intent", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
   // Authentication endpoints
   app.post("/api/auth/google", async (req, res) => {
     try {

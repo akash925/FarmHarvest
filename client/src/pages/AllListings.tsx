@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { Grid, List, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
