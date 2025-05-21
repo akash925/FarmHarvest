@@ -22,7 +22,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider(props: AuthProviderProps): React.ReactElement {
+export function AuthProvider({ children }: AuthProviderProps): React.ReactElement {
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -108,10 +108,9 @@ export function AuthProvider(props: AuthProviderProps): React.ReactElement {
     signOut
   };
   
-  // Using createElement because this is a .ts file, not .tsx
-  return React.createElement(
-    AuthContext.Provider,
-    { value: contextValue },
-    props.children
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 }
