@@ -19,7 +19,7 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
+  // Return the response without throwing so the caller can handle errors as needed
   return res;
 }
 
