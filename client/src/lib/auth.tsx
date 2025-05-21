@@ -13,11 +13,16 @@ interface User {
   authId: string;
 }
 
+interface EmailCredentials {
+  email: string;
+  password: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isInitializing: boolean;
   isAuthenticated: boolean;
-  signIn: (provider: "google" | "facebook") => Promise<void>;
+  signIn: (provider: "google" | "facebook" | "email", credentials?: EmailCredentials) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
