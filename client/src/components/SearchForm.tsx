@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from '@/components/ui/select';
+import { LocationIcon } from '@/components/ui/icons';
 
 interface SearchFormProps {
   onSearch: (location: string, category: string) => void;
@@ -17,7 +18,7 @@ interface SearchFormProps {
 
 export default function SearchForm({ onSearch, className = '' }: SearchFormProps) {
   const [location, setLocation] = useState('');
-  const [category, setCategory] = useState('All Categories');
+  const [category, setCategory] = useState('all');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,7 @@ export default function SearchForm({ onSearch, className = '' }: SearchFormProps
           placeholder="Enter ZIP code"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-primary-400 focus:border-primary-400"
+          className="w-full px-4 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-primary-400 focus:border-primary-400"
         />
       </div>
       <div className="mb-4">
@@ -42,16 +43,16 @@ export default function SearchForm({ onSearch, className = '' }: SearchFormProps
           value={category}
           onValueChange={(value) => setCategory(value)}
         >
-          <SelectTrigger id="category" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-primary-400 focus:border-primary-400">
+          <SelectTrigger id="category" className="w-full px-4 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-primary-400 focus:border-primary-400">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All Categories">All Categories</SelectItem>
-            <SelectItem value="Fruits">Fruits</SelectItem>
-            <SelectItem value="Vegetables">Vegetables</SelectItem>
-            <SelectItem value="Eggs">Eggs</SelectItem>
-            <SelectItem value="Herbs">Herbs</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
+          <SelectContent className="bg-white text-slate-900">
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="fruits">Fruits</SelectItem>
+            <SelectItem value="vegetables">Vegetables</SelectItem>
+            <SelectItem value="eggs">Eggs</SelectItem>
+            <SelectItem value="herbs">Herbs</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
       </div>
