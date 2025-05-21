@@ -5,7 +5,7 @@ import {
   reviews, type Review, type InsertReview
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray, desc, gte, like, lte, or } from "drizzle-orm";
+import { eq, and, inArray, desc, gte, like, lte, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -237,14 +237,15 @@ export class DatabaseStorage implements IStorage {
   // Top sellers
   async getTopSellers(limit: number = 3): Promise<User[]> {
     // Get sellers with the most orders
+    // Using drizzle count aggregation correctly
     const sellerOrders = await db
       .select({
         sellerId: orders.sellerId,
-        count: db.count(orders.id)
+        orderCount: sql`count(${orders.id})`.as('count')
       })
       .from(orders)
       .groupBy(orders.sellerId)
-      .orderBy(desc(db.count(orders.id)))
+      .orderBy(sql`count(${orders.id}) desc`)
       .limit(limit);
       
     const sellerIds = sellerOrders.map(so => so.sellerId);
