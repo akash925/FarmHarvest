@@ -9,16 +9,23 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { LocationIcon } from '@/components/ui/icons';
+import { MapPin } from 'lucide-react';
 
 interface SearchFormProps {
   onSearch: (location: string, category: string) => void;
   className?: string;
+  initialZip?: string;
+  initialCategory?: string;
 }
 
-export default function SearchForm({ onSearch, className = '' }: SearchFormProps) {
-  const [location, setLocation] = useState('');
-  const [category, setCategory] = useState('all');
+export default function SearchForm({ 
+  onSearch, 
+  className = '',
+  initialZip = '',
+  initialCategory = 'all'
+}: SearchFormProps) {
+  const [location, setLocation] = useState(initialZip);
+  const [category, setCategory] = useState(initialCategory);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -82,7 +82,12 @@ export default function AllListings() {
                     <SheetTitle>Filter Listings</SheetTitle>
                   </SheetHeader>
                   <div className="py-4">
-                    <SearchForm onSearch={handleSearch} className="mb-6" />
+                    <SearchForm 
+                      onSearch={handleSearch} 
+                      initialZip={zip} 
+                      initialCategory={category}
+                      className="mb-6" 
+                    />
                     
                     <div className="space-y-4">
                       <div>

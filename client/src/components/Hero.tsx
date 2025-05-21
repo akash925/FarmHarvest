@@ -43,7 +43,11 @@ export default function Hero() {
           
           {/* Search component for homepage */}
           <div className="bg-white p-4 rounded-xl shadow-lg max-w-md">
-            <SearchForm onSearch={handleSearch} />
+            <SearchForm 
+              onSearch={handleSearch} 
+              initialZip="" 
+              initialCategory="all" 
+            />
           </div>
         </div>
       </div>
