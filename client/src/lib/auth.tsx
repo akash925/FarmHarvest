@@ -30,7 +30,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   isInitializing: true,
   isAuthenticated: false,
-  signIn: async () => {},
+  signIn: async (_provider, _credentials?) => {},
   signOut: async () => {},
 });
 
@@ -73,8 +73,25 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const signIn = async (provider: "google" | "facebook") => {
+  const signIn = async (provider: "google" | "facebook" | "email", credentials?: EmailCredentials) => {
     try {
+      // Handle email/password authentication
+      if (provider === "email" && credentials) {
+        const res = await apiRequest("POST", "/api/auth/signin", {
+          email: credentials.email,
+          password: credentials.password
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Invalid email or password");
+        }
+        
+        const data = await res.json();
+        setUser(data.user);
+        return;
+      }
+
       // In a real implementation, we would use the proper OAuth flow
       if (provider === "google") {
         const mockGoogleData = {
@@ -110,7 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         setUser(data.user);
       }
     } catch (error) {
-      console.error(`Failed to sign in with ${provider}:`, error);
+      console.error(`Failed to sign in:`, error);
       throw error;
     }
   };

@@ -6,7 +6,8 @@ import { z } from "zod";
 import {
   insertListingSchema,
   insertOrderSchema,
-  insertReviewSchema
+  insertReviewSchema,
+  insertUserSchema
 } from "@shared/schema";
 
 // Get Stripe secret key from environment
@@ -85,6 +86,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Error setting up test user" });
       }
     }
+    
+    // Add the email signup and signin endpoints after the auto-login logic
 
     // Now check session and return user data
     if (req.session.userId) {
