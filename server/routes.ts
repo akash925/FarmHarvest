@@ -55,6 +55,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  // Simple auth session endpoint to check if user is logged in
+  app.get("/api/auth/session", (req, res) => {
+    if (req.session.userId) {
+      storage.getUserById(req.session.userId)
+        .then(user => {
+          if (user) {
+            return res.status(200).json({ user });
+          } else {
+            req.session.destroy(() => {});
+            return res.status(401).json({ message: "User not found" });
+          }
+        })
+        .catch(error => {
+          console.error("Session verification error:", error);
+          return res.status(500).json({ message: "Error verifying session" });
+        });
+    } else {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+  });
+
   // Authentication endpoints
   app.post("/api/auth/google", async (req, res) => {
     try {
@@ -79,6 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Set the user ID in the session
       req.session.userId = user.id;
       
       return res.status(200).json({ user });

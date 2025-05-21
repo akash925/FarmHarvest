@@ -1,10 +1,49 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import session from "express-session";
+import pgSession from "connect-pg-simple";
+import { pool } from "./db";
+
+// Extend express-session with our custom properties
+declare module 'express-session' {
+  interface SessionData {
+    userId?: number;
+  }
+}
+
+// Extend Express Request type to include session
+declare global {
+  namespace Express {
+    interface Request {
+      session: session.Session & Partial<session.SessionData>;
+    }
+  }
+}
+
+// Initialize connect-pg-simple with pg pool
+const PgSession = pgSession(session);
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Set up session handling
+app.use(session({
+  store: new PgSession({
+    pool,
+    tableName: 'user_sessions', // Use this specific table for sessions
+    createTableIfMissing: true, // Create the table if it doesn't exist
+  }),
+  secret: process.env.SESSION_SECRET || 'farm-produce-marketplace-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+  }
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
