@@ -269,7 +269,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/listings/featured", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 8;
-      const listings = await storage.getFeaturedListings(limit);
+      let listings = await storage.getFeaturedListings(limit);
+      
+      // If no listings found, create some sample listings for demonstration
+      if (listings.length === 0) {
+        const testUser = await storage.getUserById(1); // Get the test user
+        
+        if (testUser) {
+          // Create some sample produce listings
+          const sampleListings = [
+            {
+              title: "Fresh Organic Tomatoes",
+              description: "Vine-ripened tomatoes grown without pesticides. Sweet and juicy - perfect for salads or cooking.",
+              price: 4.99,
+              quantity: 24,
+              unit: "lb",
+              category: "vegetables",
+              zip: "90210",
+              image: "https://images.unsplash.com/photo-1524593166156-312f362cada0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80",
+              userId: testUser.id
+            },
+            {
+              title: "Backyard Fresh Eggs",
+              description: "Free-range eggs from happy hens. Collected daily for maximum freshness.",
+              price: 6.99,
+              quantity: 12,
+              unit: "dozen",
+              category: "eggs",
+              zip: "90210",
+              image: "https://images.unsplash.com/photo-1598965675045-45c7d5a09d8f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2071&q=80",
+              userId: testUser.id
+            },
+            {
+              title: "Seasonal Berry Mix",
+              description: "A delicious mix of locally grown strawberries, blueberries, and blackberries. Perfect for snacking or baking.",
+              price: 7.99,
+              quantity: 16,
+              unit: "oz",
+              category: "fruits",
+              zip: "90210",
+              image: "https://images.unsplash.com/photo-1563746924237-f81701bda6a9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2071&q=80",
+              userId: testUser.id
+            },
+            {
+              title: "Fresh Herb Bundle",
+              description: "Freshly cut rosemary, thyme, and basil. Grown in our garden without chemicals.",
+              price: 3.99,
+              quantity: 1,
+              unit: "bundle",
+              category: "herbs",
+              zip: "90210",
+              image: "https://images.unsplash.com/photo-1601648764658-cf37e8c89b70?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2071&q=80",
+              userId: testUser.id
+            }
+          ];
+          
+          // Add the sample listings to the database
+          for (const listing of sampleListings) {
+            await storage.createListing(listing);
+          }
+          
+          // Fetch the newly added listings
+          listings = await storage.getFeaturedListings(limit);
+        }
+      }
+      
       return res.status(200).json({ listings });
     } catch (error) {
       console.error("Get featured listings error:", error);
