@@ -281,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               title: "Fresh Organic Tomatoes",
               description: "Vine-ripened tomatoes grown without pesticides. Sweet and juicy - perfect for salads or cooking.",
-              price: 4.99,
+              price: 499, // Stored in cents
               quantity: 24,
               unit: "lb",
               category: "vegetables",
@@ -292,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               title: "Backyard Fresh Eggs",
               description: "Free-range eggs from happy hens. Collected daily for maximum freshness.",
-              price: 6.99,
+              price: 699, // Stored in cents
               quantity: 12,
               unit: "dozen",
               category: "eggs",
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               title: "Seasonal Berry Mix",
               description: "A delicious mix of locally grown strawberries, blueberries, and blackberries. Perfect for snacking or baking.",
-              price: 7.99,
+              price: 799, // Stored in cents
               quantity: 16,
               unit: "oz",
               category: "fruits",
@@ -314,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               title: "Fresh Herb Bundle",
               description: "Freshly cut rosemary, thyme, and basil. Grown in our garden without chemicals.",
-              price: 3.99,
+              price: 399, // Stored in cents
               quantity: 1,
               unit: "bundle",
               category: "herbs",
