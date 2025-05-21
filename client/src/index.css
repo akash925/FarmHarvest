@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 4%;
+  
+  --muted: 60 5% 96%;
+  --muted-foreground: 25 5% 45%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 4%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 4%;
+  
+  --border: 20 6% 90%;
+  --input: 20 6% 90%;
+  
+  --primary: 151 64% 40%;
+  --primary-foreground: 155 100% 99%;
+  
+  --secondary: 60 5% 96%;
+  --secondary-foreground: 24 10% 10%;
+  
+  --accent: 60 5% 96%;
+  --accent-foreground: 24 10% 10%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 60 9% 98%;
+  
+  --ring: 151 64% 40%;
+  
+  --radius: 0.5rem;
+
+  /* Additional custom colors */
+  --primary-50: 150 80% 98%;
+  --primary-100: 151 80% 96%;
+  --primary-200: 151 72% 85%;
+  --primary-300: 151 68% 74%;
+  --primary-400: 151 64% 54%;
+  --primary-500: 151 64% 40%;
+  --primary-600: 151 64% 38%;
+  --primary-700: 151 64% 32%;
+  --primary-800: 151 64% 28%;
+  --primary-900: 151 64% 22%;
+  
+  --terracotta-400: 31 96% 52%;
+  --terracotta-500: 25 100% 41%;
+  
+  --slate-100: 210 40% 98%;
+  --slate-200: 214 32% 91%;
+  --slate-300: 213 27% 84%;
+  --slate-400: 215 20% 65%;
+  --slate-500: 215 16% 47%;
+  --slate-600: 215 19% 35%;
+  --slate-700: 215 25% 27%;
+  --slate-800: 217 33% 17%;
+  --slate-900: 222 47% 11%;
+  
+  /* Chart colors */
+  --chart-1: var(--primary);
+  --chart-2: 215 20% 65%;
+  --chart-3: 31 96% 52%;
+  --chart-4: 260 60% 55%;
+  --chart-5: 325 65% 45%;
+}
+
+.dark {
+  --background: 240 10% 4%;
+  --foreground: 0 0% 98%;
+  
+  --muted: 240 4% 16%;
+  --muted-foreground: 240 5% 65%;
+  
+  --popover: 240 10% 4%;
+  --popover-foreground: 0 0% 98%;
+  
+  --card: 240 10% 4%;
+  --card-foreground: 0 0% 98%;
+  
+  --border: 240 4% 16%;
+  --input: 240 4% 16%;
+  
+  --primary: 151 64% 40%;
+  --primary-foreground: 155 100% 99%;
+  
+  --secondary: 240 4% 16%;
+  --secondary-foreground: 0 0% 98%;
+  
+  --accent: 240 4% 16%;
+  --accent-foreground: 0 0% 98%;
+  
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --ring: 240 5% 84%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-400 hover:bg-primary-500 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition duration-150 ease-in-out;
+  }
+  
+  .btn-secondary {
+    @apply bg-white border border-primary-400 text-primary-500 hover:bg-primary-50 font-medium px-4 py-2 rounded-lg transition duration-150 ease-in-out;
+  }
+}
