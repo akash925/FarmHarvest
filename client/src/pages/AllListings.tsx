@@ -43,7 +43,7 @@ export default function AllListings() {
   }, [searchQuery, category, zip]);
   
   // Fetch listings based on filters
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<{listings: any[]}>({
     queryKey: [`/api/listings?${searchParams.toString()}`],
   });
 
@@ -146,12 +146,12 @@ export default function AllListings() {
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
-                      <SelectItem value="Fruits">Fruits</SelectItem>
-                      <SelectItem value="Vegetables">Vegetables</SelectItem>
-                      <SelectItem value="Eggs">Eggs</SelectItem>
-                      <SelectItem value="Herbs">Herbs</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="fruits">Fruits</SelectItem>
+                      <SelectItem value="vegetables">Vegetables</SelectItem>
+                      <SelectItem value="eggs">Eggs</SelectItem>
+                      <SelectItem value="herbs">Herbs</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -184,7 +184,7 @@ export default function AllListings() {
                 </div>
               ) : (
                 <>
-                  {data?.listings?.length > 0 ? (
+                  {data?.listings && data.listings.length > 0 ? (
                     <div className={
                       viewMode === 'grid'
                         ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
@@ -196,14 +196,28 @@ export default function AllListings() {
                     </div>
                   ) : (
                     <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
-                      <p className="text-slate-600 mb-4">No listings found matching your criteria.</p>
-                      <Button onClick={() => {
-                        setSearchQuery('');
-                        setCategory('');
-                        setZip('');
-                      }}>
-                        Clear Filters
-                      </Button>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">No listings found</h3>
+                      <p className="text-slate-600 mb-6">
+                        There are no produce listings matching your criteria yet. You can either:
+                      </p>
+                      <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 justify-center">
+                        <Button 
+                          onClick={() => {
+                            setSearchQuery('');
+                            setCategory('');
+                            setZip('');
+                          }}
+                          variant="outline"
+                        >
+                          Clear Filters
+                        </Button>
+                        <Button onClick={() => window.location.href = '/listings/new'}>
+                          List Your Produce
+                        </Button>
+                      </div>
+                      <p className="mt-6 text-sm text-slate-500">
+                        Be the first to share your locally grown produce with your community!
+                      </p>
                     </div>
                   )}
                 </>
