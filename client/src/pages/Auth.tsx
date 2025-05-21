@@ -123,11 +123,13 @@ export default function Auth() {
         throw new Error(errorData.message || 'Failed to create account');
       }
       
-      // Auto login after signup
-      await signIn('email', {
-        email: values.email,
-        password: values.password
-      });
+      // Auto login for demo purposes
+      // Note: The API already sets the session, so we just need to get the user
+      const sessionRes = await apiRequest('GET', '/api/auth/session');
+      const sessionData = await sessionRes.json();
+      if (sessionData.user) {
+        // We don't need to call signIn since the session is already set
+      }
       
       toast({
         title: 'Account Created!',
@@ -151,10 +153,20 @@ export default function Auth() {
     try {
       setIsLoading(true);
       
-      await signIn('email', {
+      // Call the signin API directly
+      const response = await apiRequest('POST', '/api/auth/signin', {
         email: values.email,
         password: values.password
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Invalid email or password');
+      }
+      
+      // Refresh the user session
+      const sessionRes = await apiRequest('GET', '/api/auth/session');
+      const sessionData = await sessionRes.json();
       
       toast({
         title: 'Welcome Back!',

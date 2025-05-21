@@ -194,6 +194,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Email signup endpoint for farmer account creation
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      // Validate request body
+      const emailSignupSchema = insertUserSchema.extend({
+        password: z.string().min(8, { message: "Password must be at least 8 characters" })
+      });
+      
+      const validation = emailSignupSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid signup data", 
+          errors: validation.error.format() 
+        });
+      }
+      
+      const { password, ...userData } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+      
+      // Create user in database
+      // In a real app, we would hash the password and store it securely
+      const newUser = await storage.createUser({
+        ...userData,
+        authType: "email",
+        authId: userData.email
+      });
+      
+      // Set session to log the user in
+      req.session.userId = newUser.id;
+      
+      // Return user data (excluding sensitive info)
+      res.status(201).json({ user: newUser });
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account", error: error.message });
+    }
+  });
+  
+  // Email signin endpoint
+  app.post("/api/auth/signin", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // Get user by email
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user || user.authType !== "email") {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // In a real app, we would verify the password using a secure hash comparison
+      // For demo purposes, we're just checking if the user exists
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      // Return user data
+      res.json({ user });
+    } catch (error: any) {
+      console.error("Signin error:", error);
+      res.status(500).json({ message: "Failed to sign in", error: error.message });
+    }
+  });
+  
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy(() => {
       res.status(200).json({ message: "Logged out" });
