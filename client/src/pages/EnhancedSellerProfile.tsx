@@ -1,52 +1,88 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'wouter';
-import { Helmet } from 'react-helmet-async';
-import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { 
-  MapPin, 
-  Clock, 
-  Phone, 
-  Mail, 
-  Star, 
-  Calendar,
-  Users,
-  Droplets,
-  Sun,
-  Ruler,
-  MessageCircle,
-  ShoppingCart,
-  Camera,
-  Video,
-  Edit3
-} from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
+import { useState } from "react";
+import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { User } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import ListingCard from "@/components/ListingCard";
+
+// Mock data for development only - will be replaced with real data
+const sampleMedia = [
+  {
+    id: 1,
+    mediaType: "photo" as const,
+    url: "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTF8fGZhcm18ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60",
+    caption: "Beautiful spring fields ready for planting",
+  },
+  {
+    id: 2,
+    mediaType: "photo" as const,
+    url: "https://images.unsplash.com/photo-1530507629858-e3759c1ee136?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTV8fGZhcm18ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60",
+    caption: "Fresh organic produce from our farm",
+  },
+  {
+    id: 3,
+    mediaType: "photo" as const,
+    url: "https://images.unsplash.com/photo-1589923188900-85dae523342b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTh8fGZhcm18ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60",
+    caption: "Happy chickens laying fresh eggs daily",
+  },
+  {
+    id: 4, 
+    mediaType: "video" as const,
+    url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    caption: "Tour of our sustainable farming practices",
+  },
+];
+
+const sampleFarmSpaces = [
+  {
+    id: 1,
+    squareFootage: 500,
+    soilType: "loam",
+    lightConditions: "full_sun",
+    irrigationOptions: "manual",
+    managementLevel: "daily_visit",
+    price: 15000, // in cents ($150)
+    pricingType: "monthly",
+    status: "available",
+    additionalNotes: "Perfect for growing tomatoes and peppers. Has been used for vegetables for the past 3 years.",
+  },
+  {
+    id: 2,
+    squareFootage: 1000,
+    soilType: "clay",
+    lightConditions: "partial_shade",
+    irrigationOptions: "automated",
+    managementLevel: "hands_off",
+    price: 25000, // in cents ($250)
+    pricingType: "seasonal",
+    status: "available",
+    additionalNotes: "Great for fruit trees and berries. Automated drip irrigation system installed.",
+  },
+];
 
 interface SellerProfileData {
-  user: {
+  user: User;
+  profile: {
     id: number;
-    name: string;
-    email: string;
-    image: string;
-    zip: string;
-    about: string;
-  };
-  profile?: {
+    userId: number;
     farmName: string;
     bio: string;
-    address: string;
+    address: string | null;
     locationVisibility: string;
-    phone: string;
+    phone: string | null;
     contactVisibility: string;
     operationalHours: {
       days: string[];
       hours: string;
     };
+    createdAt: string;
+    updatedAt: string;
   };
   media: Array<{
     id: number;
@@ -64,407 +100,623 @@ interface SellerProfileData {
     price: number;
     pricingType: string;
     status: string;
-    additionalNotes: string;
+    additionalNotes: string | null;
   }>;
   listings: Array<{
     id: number;
     title: string;
     price: number;
-    image: string;
+    imageUrl: string;
     category: string;
-  }>;
-  reviews: Array<{
-    id: number;
-    rating: number;
-    comment: string;
-    createdAt: string;
   }>;
 }
 
 export default function EnhancedSellerProfile() {
-  const { id } = useParams();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("overview");
   
-  const { data: sellerData, isLoading } = useQuery<SellerProfileData>({
-    queryKey: ['/api/sellers', id, 'enhanced'],
-    enabled: !!id
+  // Fetch seller profile data
+  const { data: profileData, isLoading, error } = useQuery({
+    queryKey: ['/api/seller-profiles', id],
+    queryFn: async () => {
+      try {
+        // First check if profile exists
+        const response = await fetch(`/api/seller-profiles/${id}`);
+        
+        if (response.ok) {
+          return response.json();
+        }
+        
+        // If profile doesn't exist but we're looking at our own profile, show setup option
+        if (response.status === 404 && currentUser && currentUser.id === parseInt(id)) {
+          return null;
+        }
+        
+        throw new Error("Failed to load seller profile");
+      } catch (error) {
+        console.error("Error fetching seller profile:", error);
+        throw error;
+      }
+    },
   });
-
+  
+  const { data: userData } = useQuery({
+    queryKey: ['/api/users', id],
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${id}`);
+      if (!response.ok) throw new Error("Failed to load user data");
+      return response.json();
+    },
+  });
+  
+  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="container mx-auto py-12 flex items-center justify-center">
+        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
-
-  if (!sellerData) {
+  
+  // Error state
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Seller Not Found</h1>
-          <p className="text-gray-600">The seller profile you're looking for doesn't exist.</p>
+      <div className="container mx-auto py-12">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-red-500">Error Loading Profile</CardTitle>
+            <CardDescription>
+              We encountered an error while loading this seller profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Please try again later or contact support if the problem persists.</p>
+            <Button onClick={() => navigate("/")} className="mt-4">
+              Return to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // If no profile exists yet but it's the current user
+  if (!profileData && currentUser && currentUser.id === parseInt(id)) {
+    return (
+      <div className="container mx-auto py-12">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Your Enhanced Seller Profile</CardTitle>
+            <CardDescription>
+              You haven't set up your enhanced seller profile yet. Create one to showcase your farm and available spaces!
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-slate-50 p-4 rounded-md space-y-2">
+              <h3 className="font-medium">With an enhanced profile you can:</h3>
+              <ul className="list-disc list-inside space-y-1 text-slate-600">
+                <li>Showcase your farm with photos and videos</li>
+                <li>Share details about your farming practices</li>
+                <li>Offer farm space for others to use</li>
+                <li>Set your contact preferences and operational hours</li>
+                <li>Build trust with potential customers</li>
+              </ul>
+            </div>
+            
+            <Button onClick={() => navigate("/seller-profile-setup")} size="lg" className="w-full">
+              Set Up Your Enhanced Profile
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Using real data if available, otherwise fallback to mock data
+  const sellerData = profileData || {
+    user: userData?.user,
+    profile: {
+      farmName: userData?.user.name + "'s Farm",
+      bio: "This farmer hasn't created an enhanced profile yet.",
+      operationalHours: { days: [], hours: "" },
+    },
+    media: [],
+    farmSpaces: [],
+    listings: [],
+  };
+  
+  // Using the fetched user data as a fallback if needed
+  const user = sellerData.user || userData?.user;
+  
+  // If neither profile nor user data is available
+  if (!user) {
+    return (
+      <div className="container mx-auto py-12">
+        <Card>
+          <CardHeader>
+            <CardTitle>Seller Not Found</CardTitle>
+            <CardDescription>
+              We couldn't find this seller in our system.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate("/")} className="mt-4">
+              Return to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Display the profile
+  return (
+    <div className="container mx-auto py-8 px-4 md:px-0">
+      {/* Profile Header */}
+      <div className="flex flex-col md:flex-row gap-6 items-start mb-8">
+        <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-200 flex-shrink-0">
+          {user.image ? (
+            <img 
+              src={user.image} 
+              alt={user.name || "Seller"} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-4xl font-bold">
+              {(user.name || "S")[0].toUpperCase()}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold mb-2">
+            {sellerData.profile?.farmName || user.name + "'s Farm"}
+          </h1>
+          
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              Verified Seller
+            </Badge>
+            {user.productsGrown && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                {user.productsGrown.split(',')[0].trim()} Grower
+              </Badge>
+            )}
+            {user.zip && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                {user.zip}
+              </Badge>
+            )}
+          </div>
+          
+          <p className="text-slate-600 mb-4">
+            {sellerData.profile?.bio || user.about || "This seller hasn't added a bio yet."}
+          </p>
+          
+          {currentUser && currentUser.id === parseInt(id) ? (
+            <Button onClick={() => navigate("/seller-profile-setup")}>
+              {sellerData.profile ? "Edit Profile" : "Create Enhanced Profile"}
+            </Button>
+          ) : (
+            <Button>Contact Seller</Button>
+          )}
         </div>
       </div>
-    );
-  }
-
-  const { user, profile, media, farmSpaces, listings, reviews } = sellerData;
-  const averageRating = reviews.length > 0 
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
-    : 0;
-
-  return (
-    <>
-      <Helmet>
-        <title>{profile?.farmName || user.name} - Seller Profile | FarmDirect</title>
-        <meta 
-          name="description" 
-          content={`Browse ${profile?.farmName || user.name}'s fresh produce and farm spaces. ${profile?.bio || user.about}`} 
-        />
-      </Helmet>
-
-      <div className="min-h-screen bg-slate-50">
-        {/* Hero Section */}
-        <div className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex flex-col md:flex-row items-start gap-6">
-              <Avatar className="h-24 w-24 md:h-32 md:w-32">
-                <AvatarImage src={user.image} alt={user.name} />
-                <AvatarFallback className="text-2xl">{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900">
-                      {profile?.farmName || user.name}
-                    </h1>
-                    {profile?.farmName && (
-                      <p className="text-lg text-gray-600 mt-1">by {user.name}</p>
-                    )}
-                    
-                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>{user.zip}</span>
-                      </div>
-                      
-                      {averageRating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span>{averageRating.toFixed(1)} ({reviews.length} reviews)</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{listings.length} active listings</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4" />
-                      Contact Seller
-                    </Button>
-                    <Button className="flex items-center gap-2">
-                      <ShoppingCart className="h-4 w-4" />
-                      View Products
-                    </Button>
-                  </div>
+      
+      {/* Profile Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+        <TabsList className="grid grid-cols-4 mb-8">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="listings">Products</TabsTrigger>
+          <TabsTrigger value="spaces">Farm Spaces</TabsTrigger>
+          <TabsTrigger value="gallery">Gallery</TabsTrigger>
+        </TabsList>
+        
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Farm Details</CardTitle>
+              <CardDescription>Information about this farm and its practices</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Products Grown */}
+              <div>
+                <h3 className="font-medium mb-2">Products Grown</h3>
+                <div className="flex flex-wrap gap-2">
+                  {user.productsGrown ? (
+                    user.productsGrown.split(',').map((product, index) => (
+                      <Badge key={index} variant="outline" className="bg-green-50 text-green-800">
+                        {product.trim()}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-slate-500">No products listed</p>
+                  )}
                 </div>
-                
-                {profile?.bio && (
-                  <p className="text-gray-700 mt-4 leading-relaxed">
-                    {profile.bio}
-                  </p>
+              </div>
+              
+              <Separator />
+              
+              {/* Operational Hours */}
+              <div>
+                <h3 className="font-medium mb-2">Operational Hours</h3>
+                {sellerData.profile?.operationalHours?.days?.length > 0 ? (
+                  <div>
+                    <p className="font-medium">{sellerData.profile.operationalHours.hours}</p>
+                    <p className="text-slate-600">
+                      {sellerData.profile.operationalHours.days.join(', ')}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-slate-500">Hours not specified</p>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Media Gallery */}
-        {media.length > 0 && (
-          <div className="bg-white border-b">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Camera className="h-5 w-5" />
-                Farm Gallery
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {media.map((item) => (
-                  <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-                    {item.mediaType === 'photo' ? (
-                      <img 
-                        src={item.url} 
-                        alt={item.caption || 'Farm photo'} 
-                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Video className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
-                    {item.mediaType === 'video' && (
-                      <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
-                        <Video className="h-6 w-6 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+              
+              <Separator />
+              
+              {/* Location */}
+              <div>
+                <h3 className="font-medium mb-2">Location</h3>
+                <p className="text-slate-600">
+                  {sellerData.profile?.locationVisibility === 'full' && sellerData.profile.address
+                    ? sellerData.profile.address
+                    : sellerData.profile?.locationVisibility === 'area' && sellerData.profile.address
+                    ? sellerData.profile.address.split(',').slice(1).join(',').trim()
+                    : user.zip || "Location not specified"}
+                </p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="products">Products ({listings.length})</TabsTrigger>
-              <TabsTrigger value="farm-spaces">Farm Spaces ({farmSpaces.length})</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
-            </TabsList>
-
-            <div className="mt-6">
-              <TabsContent value="overview" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Farm Information */}
-                  <Card className="lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle>Farm Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {profile?.address && (
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Location</p>
-                            <p className="text-gray-600">
-                              {profile.locationVisibility === 'full' ? profile.address : 
-                               profile.locationVisibility === 'area' ? `${user.zip} area` : 
-                               `${user.zip}`}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {profile?.operationalHours && (
-                        <div className="flex items-start gap-3">
-                          <Clock className="h-5 w-5 text-gray-400 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Operating Hours</p>
-                            <p className="text-gray-600">
-                              {profile.operationalHours.days?.join(', ')} - {profile.operationalHours.hours}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {user.about && (
-                        <div>
-                          <p className="font-medium mb-2">About</p>
-                          <p className="text-gray-700 leading-relaxed">{user.about}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Contact Information */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Contact Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {profile?.contactVisibility === 'email' || profile?.contactVisibility === 'both' ? (
-                        <div className="flex items-center gap-3">
-                          <Mail className="h-5 w-5 text-gray-400" />
-                          <span className="text-gray-700">{user.email}</span>
-                        </div>
-                      ) : null}
-                      
-                      {profile?.phone && (profile?.contactVisibility === 'phone' || profile?.contactVisibility === 'both') && (
-                        <div className="flex items-center gap-3">
-                          <Phone className="h-5 w-5 text-gray-400" />
-                          <span className="text-gray-700">{profile.phone}</span>
-                        </div>
-                      )}
-                      
-                      <Button className="w-full">
-                        Send Message
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="products" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {listings.map((listing) => (
-                    <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      <div className="aspect-video bg-gray-100">
-                        <img 
-                          src={listing.image} 
+              
+              {user.about && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="font-medium mb-2">About</h3>
+                    <p className="text-slate-600">{user.about}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Featured Products Preview */}
+          {sellerData.listings && sellerData.listings.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Featured Products</CardTitle>
+                <CardDescription>Current offerings from this farm</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sellerData.listings.slice(0, 3).map((listing) => (
+                    <div key={listing.id} className="border rounded-md overflow-hidden">
+                      <div className="h-40 overflow-hidden">
+                        <img
+                          src={listing.imageUrl || "https://images.unsplash.com/photo-1553531384-cc64ac80f931"}
                           alt={listing.title}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-lg">{listing.title}</h3>
-                          <Badge variant="secondary">{listing.category}</Badge>
+                      <div className="p-4">
+                        <h3 className="font-medium">{listing.title}</h3>
+                        <p className="text-primary font-bold">
+                          ${(listing.price / 100).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4"
+                  onClick={() => setActiveTab("listings")}
+                >
+                  View All Products
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Farm Spaces Preview */}
+          {(sellerData.farmSpaces && sellerData.farmSpaces.length > 0 || sampleFarmSpaces.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Available Farm Spaces</CardTitle>
+                <CardDescription>Land available for gardening or farming</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {(sellerData.farmSpaces.length > 0 ? sellerData.farmSpaces : sampleFarmSpaces)
+                    .slice(0, 2)
+                    .map((space) => (
+                      <div key={space.id} className="border rounded-md p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium">
+                              {space.squareFootage} sq ft - {space.soilType} soil
+                            </h3>
+                            <p className="text-slate-600">
+                              {space.lightConditions.replace(/_/g, ' ')} · {space.irrigationOptions.replace(/_/g, ' ')} irrigation
+                            </p>
+                          </div>
+                          <Badge className={space.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+                            {space.status.charAt(0).toUpperCase() + space.status.slice(1)}
+                          </Badge>
                         </div>
-                        <p className="text-2xl font-bold text-primary">${(listing.price / 100).toFixed(2)}</p>
-                        <Button className="w-full mt-3">View Details</Button>
+                        <div className="mt-2">
+                          <p className="font-bold text-primary">
+                            ${(space.price / 100).toFixed(2)}/{space.pricingType}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4"
+                  onClick={() => setActiveTab("spaces")}
+                >
+                  View All Farm Spaces
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        {/* Products Tab */}
+        <TabsContent value="listings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Products for Sale</CardTitle>
+              <CardDescription>
+                Fresh produce and products from {sellerData.profile?.farmName || user.name + "'s Farm"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sellerData.listings && sellerData.listings.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {sellerData.listings.map((listing) => (
+                    <div key={listing.id} className="border rounded-md overflow-hidden">
+                      <div className="h-48 overflow-hidden">
+                        <img
+                          src={listing.imageUrl || "https://images.unsplash.com/photo-1553531384-cc64ac80f931"}
+                          alt={listing.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-medium">{listing.title}</h3>
+                          <Badge variant="outline">{listing.category}</Badge>
+                        </div>
+                        <p className="text-primary font-bold mb-3">
+                          ${(listing.price / 100).toFixed(2)}
+                        </p>
+                        <Button 
+                          onClick={() => navigate(`/listings/${listing.id}`)}
+                          className="w-full"
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <h3 className="text-xl font-medium mb-2">No Products Listed</h3>
+                  <p className="text-slate-500 mb-4">
+                    This seller doesn't have any products listed at the moment.
+                  </p>
+                  {currentUser && currentUser.id === parseInt(id) && (
+                    <Button onClick={() => navigate("/listings/new")}>
+                      Add Your First Product
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Farm Spaces Tab */}
+        <TabsContent value="spaces">
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Farm Spaces</CardTitle>
+              <CardDescription>
+                Rent space on {sellerData.profile?.farmName || user.name + "'s land"} to grow your own produce
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(sellerData.farmSpaces && sellerData.farmSpaces.length > 0) || (currentUser && currentUser.id !== parseInt(id)) ? (
+                <div className="space-y-6">
+                  {/* Spaces list */}
+                  {(sellerData.farmSpaces?.length > 0 ? sellerData.farmSpaces : sampleFarmSpaces).map((space) => (
+                    <Card key={space.id}>
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row gap-6">
+                          {/* Space visualizer */}
+                          <div className="w-full md:w-1/3 h-48 bg-slate-100 rounded-md flex items-center justify-center">
+                            <div 
+                              className="w-3/4 h-3/4 border-2 border-dashed border-slate-300 flex items-center justify-center"
+                              style={{ 
+                                backgroundColor: 
+                                  space.soilType === 'loam' ? '#c9b18c' : 
+                                  space.soilType === 'clay' ? '#d15e2b' : 
+                                  space.soilType === 'sandy' ? '#e6d3a7' : '#d8cca3' 
+                              }}
+                            >
+                              <span className="text-lg font-medium text-white text-center">
+                                {space.squareFootage} sq ft
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Space details */}
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start mb-3">
+                              <h3 className="text-xl font-medium">
+                                {space.squareFootage} sq ft Farm Plot
+                              </h3>
+                              <Badge className={space.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+                                {space.status.charAt(0).toUpperCase() + space.status.slice(1)}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                              <div>
+                                <span className="text-slate-500 text-sm">Soil Type</span>
+                                <p className="font-medium capitalize">{space.soilType}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 text-sm">Light Conditions</span>
+                                <p className="font-medium capitalize">{space.lightConditions.replace(/_/g, ' ')}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 text-sm">Irrigation</span>
+                                <p className="font-medium capitalize">{space.irrigationOptions.replace(/_/g, ' ')}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 text-sm">Management Level</span>
+                                <p className="font-medium capitalize">{space.managementLevel.replace(/_/g, ' ')}</p>
+                              </div>
+                            </div>
+                            
+                            {space.additionalNotes && (
+                              <div className="mb-4">
+                                <span className="text-slate-500 text-sm">Additional Notes</span>
+                                <p className="text-slate-600">{space.additionalNotes}</p>
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="text-slate-500 text-sm">Price</span>
+                                <p className="text-2xl font-bold text-primary">
+                                  ${(space.price / 100).toFixed(2)}
+                                  <span className="text-base font-normal text-slate-500">/{space.pricingType}</span>
+                                </p>
+                              </div>
+                              
+                              {space.status === 'available' && currentUser && currentUser.id !== parseInt(id) && (
+                                <Button onClick={() => {
+                                  toast({
+                                    title: "Interest Submitted",
+                                    description: "The farm owner will be notified of your interest in this space.",
+                                  });
+                                }}>
+                                  Rent This Space
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              </TabsContent>
-
-              <TabsContent value="farm-spaces" className="space-y-6">
-                {farmSpaces.length > 0 ? (
-                  <div className="grid gap-6">
-                    {farmSpaces.map((space) => (
-                      <Card key={space.id} className="overflow-hidden">
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <CardTitle>Farm Space Available</CardTitle>
-                            <Badge variant={space.status === 'available' ? 'default' : 'secondary'}>
-                              {space.status}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="flex items-center gap-2">
-                              <Ruler className="h-4 w-4 text-gray-400" />
-                              <div>
-                                <p className="text-sm text-gray-600">Size</p>
-                                <p className="font-medium">{space.squareFootage} sq ft</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Sun className="h-4 w-4 text-gray-400" />
-                              <div>
-                                <p className="text-sm text-gray-600">Light</p>
-                                <p className="font-medium">{space.lightConditions}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Droplets className="h-4 w-4 text-gray-400" />
-                              <div>
-                                <p className="text-sm text-gray-600">Irrigation</p>
-                                <p className="font-medium">{space.irrigationOptions}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-gray-400" />
-                              <div>
-                                <p className="text-sm text-gray-600">Management</p>
-                                <p className="font-medium">{space.managementLevel}</p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <p className="text-sm text-gray-600 mb-1">Soil Type</p>
-                            <p className="font-medium">{space.soilType}</p>
-                          </div>
-                          
-                          {space.additionalNotes && (
-                            <div>
-                              <p className="text-sm text-gray-600 mb-1">Additional Notes</p>
-                              <p className="text-gray-700">{space.additionalNotes}</p>
-                            </div>
+              ) : (
+                <div className="text-center py-8">
+                  <h3 className="text-xl font-medium mb-2">No Farm Spaces Available</h3>
+                  <p className="text-slate-500 mb-4">
+                    This seller doesn't have any farm spaces listed for rent.
+                  </p>
+                  {currentUser && currentUser.id === parseInt(id) && (
+                    <Button onClick={() => navigate("/seller-profile-setup")}>
+                      Add Farm Spaces
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Gallery Tab */}
+        <TabsContent value="gallery">
+          <Card>
+            <CardHeader>
+              <CardTitle>Farm Gallery</CardTitle>
+              <CardDescription>
+                Photos and videos from {sellerData.profile?.farmName || user.name + "'s Farm"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(sellerData.media && sellerData.media.length > 0) || (currentUser && currentUser.id !== parseInt(id)) ? (
+                <div className="space-y-8">
+                  {/* Photos */}
+                  <div>
+                    <h3 className="font-medium mb-4">Photos</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {(sellerData.media?.length > 0 
+                        ? sellerData.media.filter(m => m.mediaType === 'photo')
+                        : sampleMedia.filter(m => m.mediaType === 'photo')
+                      ).map((media) => (
+                        <div key={media.id} className="rounded-md overflow-hidden">
+                          <img
+                            src={media.url}
+                            alt={media.caption || "Farm photo"}
+                            className="w-full h-48 object-cover"
+                          />
+                          {media.caption && (
+                            <p className="p-2 text-sm text-slate-600">{media.caption}</p>
                           )}
-                          
-                          <Separator />
-                          
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-2xl font-bold text-primary">
-                                ${(space.price / 100).toFixed(2)}
-                              </p>
-                              <p className="text-sm text-gray-600">per {space.pricingType}</p>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button variant="outline">
-                                Inquire for More Info
-                              </Button>
-                              <Button>
-                                Book Now
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Farm Spaces Available</h3>
-                      <p className="text-gray-600">This seller doesn't currently have any farm spaces available for sharing.</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="reviews" className="space-y-6">
-                {reviews.length > 0 ? (
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <Card key={review.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex items-start gap-4">
-                            <Avatar>
-                              <AvatarFallback>R</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="flex">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star 
-                                      key={i} 
-                                      className={`h-4 w-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                                    />
-                                  ))}
-                                </div>
-                                <span className="text-sm text-gray-600">
-                                  {new Date(review.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <p className="text-gray-700">{review.comment}</p>
+                  
+                  {/* Videos */}
+                  {((sellerData.media?.some(m => m.mediaType === 'video')) || 
+                     (sampleMedia.some(m => m.mediaType === 'video'))) && (
+                    <div>
+                      <h3 className="font-medium mb-4">Videos</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {(sellerData.media?.length > 0 
+                          ? sellerData.media.filter(m => m.mediaType === 'video')
+                          : sampleMedia.filter(m => m.mediaType === 'video')
+                        ).map((media) => (
+                          <div key={media.id} className="rounded-md overflow-hidden">
+                            <div className="aspect-video">
+                              <iframe
+                                src={media.url}
+                                title={media.caption || "Farm video"}
+                                className="w-full h-full"
+                                allowFullScreen
+                              ></iframe>
                             </div>
+                            {media.caption && (
+                              <p className="p-2 text-sm text-slate-600">{media.caption}</p>
+                            )}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <Star className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Reviews Yet</h3>
-                      <p className="text-gray-600">This seller hasn't received any reviews yet.</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-      </div>
-    </>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <h3 className="text-xl font-medium mb-2">No Media Added</h3>
+                  <p className="text-slate-500 mb-4">
+                    This seller hasn't added any photos or videos yet.
+                  </p>
+                  {currentUser && currentUser.id === parseInt(id) && (
+                    <Button onClick={() => navigate("/seller-profile-setup")}>
+                      Add Media to Your Profile
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

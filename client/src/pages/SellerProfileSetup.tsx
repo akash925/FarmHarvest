@@ -1,747 +1,703 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
-import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation, queryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Store, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  Camera, 
-  Plus, 
-  Trash2,
-  Upload,
-  Ruler,
-  Sun,
-  Droplets,
-  Users,
-  DollarSign
-} from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+
 import { apiRequest } from '@/lib/queryClient';
 
-const sellerProfileSchema = z.object({
-  farmName: z.string().min(2, "Farm name must be at least 2 characters"),
-  bio: z.string().min(10, "Bio must be at least 10 characters"),
-  address: z.string().min(5, "Please enter a valid address"),
-  locationVisibility: z.enum(["full", "area", "city"]),
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+    },
+  },
+});
+
+// Define form schemas for each step
+const basicInfoSchema = z.object({
+  farmName: z.string().min(2, 'Farm name must be at least 2 characters'),
+  bio: z.string().min(20, 'Bio must be at least 20 characters'),
+});
+
+const contactInfoSchema = z.object({
+  address: z.string().optional(),
+  locationVisibility: z.enum(['full', 'area', 'city']),
   phone: z.string().optional(),
-  contactVisibility: z.enum(["email", "phone", "both"]),
-  operationalDays: z.array(z.string()).min(1, "Select at least one day"),
-  operationalHours: z.string().min(1, "Please specify operating hours"),
+  contactVisibility: z.enum(['phone', 'email', 'both']),
+});
+
+const operationalHoursSchema = z.object({
+  days: z.array(z.string()),
+  hours: z.string(),
 });
 
 const farmSpaceSchema = z.object({
-  squareFootage: z.number().min(1, "Square footage must be greater than 0"),
-  soilType: z.enum(["loam", "clay", "sandy", "mixed", "custom"]),
-  customSoilType: z.string().optional(),
-  lightConditions: z.enum(["full_sun", "partial_shade", "mostly_shaded", "custom"]),
-  customLightConditions: z.string().optional(),
-  irrigationOptions: z.enum(["manual", "automated", "natural"]),
-  managementLevel: z.enum(["hands_off", "daily_visit", "multiple_visits"]),
-  price: z.number().min(0, "Price must be 0 or greater"),
-  pricingType: z.enum(["monthly", "seasonal", "flat"]),
+  squareFootage: z.number().min(1, 'Square footage must be at least 1'),
+  soilType: z.string(),
+  lightConditions: z.string(),
+  irrigationOptions: z.string(),
+  managementLevel: z.string(),
+  price: z.number().min(1, 'Price must be at least 1'),
+  pricingType: z.enum(['monthly', 'seasonal', 'flat']),
   additionalNotes: z.string().optional(),
 });
 
-type SellerProfileFormData = z.infer<typeof sellerProfileSchema>;
-type FarmSpaceFormData = z.infer<typeof farmSpaceSchema>;
+type BasicInfoValues = z.infer<typeof basicInfoSchema>;
+type ContactInfoValues = z.infer<typeof contactInfoSchema>;
+type OperationalHoursValues = z.infer<typeof operationalHoursSchema>;
+type FarmSpaceValues = z.infer<typeof farmSpaceSchema>;
 
 export default function SellerProfileSetup() {
+  const { user, isInitializing } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [farmSpaces, setFarmSpaces] = useState<FarmSpaceFormData[]>([]);
-
-  const profileForm = useForm<SellerProfileFormData>({
-    resolver: zodResolver(sellerProfileSchema),
-    defaultValues: {
-      farmName: "",
-      bio: "",
-      address: "",
-      locationVisibility: "city",
-      phone: "",
-      contactVisibility: "email",
-      operationalDays: [],
-      operationalHours: "",
-    }
+  const [currentStep, setCurrentStep] = useState<string>('basic');
+  const [profileData, setProfileData] = useState({
+    basic: {
+      farmName: '',
+      bio: '',
+    },
+    contact: {
+      address: '',
+      locationVisibility: 'city',
+      phone: '',
+      contactVisibility: 'email',
+    },
+    hours: {
+      days: [],
+      hours: '',
+    },
+    space: {
+      hasSpace: false,
+      spaces: [] as FarmSpaceValues[],
+    },
+    media: {
+      uploads: [] as { mediaType: 'photo' | 'video'; url: string; caption: string }[],
+    },
   });
 
-  const farmSpaceForm = useForm<FarmSpaceFormData>({
+  // Basic Info Form
+  const basicInfoForm = useForm<BasicInfoValues>({
+    resolver: zodResolver(basicInfoSchema),
+    defaultValues: profileData.basic,
+  });
+
+  // Contact Info Form
+  const contactInfoForm = useForm<ContactInfoValues>({
+    resolver: zodResolver(contactInfoSchema),
+    defaultValues: profileData.contact,
+  });
+
+  // Hours Form
+  const hoursForm = useForm<OperationalHoursValues>({
+    resolver: zodResolver(operationalHoursSchema),
+    defaultValues: profileData.hours,
+  });
+
+  // Farm Space Form
+  const farmSpaceForm = useForm<FarmSpaceValues>({
     resolver: zodResolver(farmSpaceSchema),
     defaultValues: {
       squareFootage: 0,
-      soilType: "loam",
-      lightConditions: "full_sun",
-      irrigationOptions: "manual",
-      managementLevel: "hands_off",
+      soilType: 'loam',
+      lightConditions: 'full_sun',
+      irrigationOptions: 'manual',
+      managementLevel: 'daily_visit',
       price: 0,
-      pricingType: "monthly",
-      additionalNotes: "",
-    }
+      pricingType: 'monthly',
+      additionalNotes: '',
+    },
   });
 
+  // Create profile mutation
   const createProfileMutation = useMutation({
-    mutationFn: async (data: SellerProfileFormData) => {
-      const response = await apiRequest('POST', '/api/seller-profiles', data);
-      if (!response.ok) {
-        throw new Error('Failed to create seller profile');
-      }
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/seller-profiles', {
+        profile: data
+      });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Create farm spaces if any
+      if (profileData.space.hasSpace && profileData.space.spaces.length > 0) {
+        profileData.space.spaces.forEach(async (space) => {
+          await apiRequest('POST', '/api/farm-spaces', {
+            farmSpace: {
+              ...space,
+              sellerProfileId: data.profile.id
+            }
+          });
+        });
+      }
+
+      // Upload media if any
+      if (profileData.media.uploads.length > 0) {
+        profileData.media.uploads.forEach(async (media) => {
+          await apiRequest('POST', '/api/profile-media', {
+            media: {
+              ...media,
+              sellerProfileId: data.profile.id
+            }
+          });
+        });
+      }
+
       toast({
-        title: "Profile Created!",
-        description: "Your seller profile has been created successfully.",
+        title: 'Profile Created!',
+        description: 'Your seller profile has been created successfully!',
       });
-      setActiveTab('media');
+
+      // Navigate to the seller profile page
+      navigate(`/seller-profile/${user?.id}`);
     },
     onError: (error) => {
+      console.error('Error creating profile:', error);
       toast({
-        title: "Error",
-        description: "Failed to create seller profile. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to create profile. Please try again.',
+        variant: 'destructive',
       });
-    }
+    },
   });
 
-  const weekDays = [
-    { id: 'monday', label: 'Monday' },
-    { id: 'tuesday', label: 'Tuesday' },
-    { id: 'wednesday', label: 'Wednesday' },
-    { id: 'thursday', label: 'Thursday' },
-    { id: 'friday', label: 'Friday' },
-    { id: 'saturday', label: 'Saturday' },
-    { id: 'sunday', label: 'Sunday' }
-  ];
-
-  const soilTypeOptions = [
-    { value: 'loam', label: 'Loam' },
-    { value: 'clay', label: 'Clay' },
-    { value: 'sandy', label: 'Sandy' },
-    { value: 'mixed', label: 'Mixed' },
-    { value: 'custom', label: 'Custom' }
-  ];
-
-  const lightConditionOptions = [
-    { value: 'full_sun', label: 'Full Sun (6+ hours)' },
-    { value: 'partial_shade', label: 'Partial Shade (3-6 hours)' },
-    { value: 'mostly_shaded', label: 'Mostly Shaded (<3 hours)' },
-    { value: 'custom', label: 'Custom' }
-  ];
-
-  const irrigationOptions = [
-    { value: 'manual', label: 'Manual watering needed' },
-    { value: 'automated', label: 'Automated watering system' },
-    { value: 'natural', label: 'Natural water source' }
-  ];
-
-  const managementOptions = [
-    { value: 'hands_off', label: 'Fully hands-off' },
-    { value: 'daily_visit', label: 'One visit per day' },
-    { value: 'multiple_visits', label: 'Multiple daily visits' }
-  ];
-
-  const handleMediaUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setMediaFiles(prev => [...prev, ...files]);
+  const onBasicInfoSubmit = (data: BasicInfoValues) => {
+    setProfileData((prev) => ({
+      ...prev,
+      basic: data,
+    }));
+    setCurrentStep('contact');
   };
 
-  const removeMedia = (index: number) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+  const onContactInfoSubmit = (data: ContactInfoValues) => {
+    setProfileData((prev) => ({
+      ...prev,
+      contact: data,
+    }));
+    setCurrentStep('hours');
   };
 
-  const addFarmSpace = (data: FarmSpaceFormData) => {
-    setFarmSpaces(prev => [...prev, data]);
-    farmSpaceForm.reset();
-    toast({
-      title: "Farm Space Added",
-      description: "Farm space has been added to your profile.",
-    });
+  const onHoursSubmit = (data: OperationalHoursValues) => {
+    setProfileData((prev) => ({
+      ...prev,
+      hours: data,
+    }));
+    setCurrentStep('space');
   };
 
-  const removeFarmSpace = (index: number) => {
-    setFarmSpaces(prev => prev.filter((_, i) => i !== index));
+  const onSpaceSubmit = (data: FarmSpaceValues) => {
+    if (profileData.space.hasSpace) {
+      setProfileData((prev) => ({
+        ...prev,
+        space: {
+          ...prev.space,
+          spaces: [...prev.space.spaces, data],
+        },
+      }));
+    }
+    setCurrentStep('media');
   };
 
-  const onSubmitProfile = (data: SellerProfileFormData) => {
-    createProfileMutation.mutate(data);
+  const onAddMedia = (mediaType: 'photo' | 'video', url: string, caption: string) => {
+    setProfileData((prev) => ({
+      ...prev,
+      media: {
+        ...prev.media,
+        uploads: [...prev.media.uploads, { mediaType, url, caption }],
+      },
+    }));
   };
 
-  const onSubmitFarmSpace = (data: FarmSpaceFormData) => {
-    addFarmSpace(data);
+  const handleSpaceToggle = (value: boolean) => {
+    setProfileData((prev) => ({
+      ...prev,
+      space: {
+        ...prev.space,
+        hasSpace: value,
+      },
+    }));
   };
+
+  const handleSubmitProfile = () => {
+    // Combine all data and submit
+    const completeProfile = {
+      userId: user?.id,
+      farmName: profileData.basic.farmName,
+      bio: profileData.basic.bio,
+      address: profileData.contact.address,
+      locationVisibility: profileData.contact.locationVisibility,
+      phone: profileData.contact.phone,
+      contactVisibility: profileData.contact.contactVisibility,
+      operationalHours: profileData.hours,
+    };
+
+    createProfileMutation.mutate(completeProfile);
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>You need to be logged in to set up your seller profile.</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button onClick={() => navigate('/auth')}>Sign In</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <Helmet>
-        <title>Setup Seller Profile | FarmDirect</title>
-        <meta name="description" content="Create your seller profile to start selling fresh produce and offering farm spaces on FarmDirect." />
-      </Helmet>
+    <div className="container mx-auto py-8 px-4 md:px-0">
+      <h1 className="text-3xl font-bold mb-6">Enhanced Seller Profile Setup</h1>
+      <p className="text-slate-600 mb-8">Complete the following steps to set up your enhanced seller profile.</p>
 
-      <div className="min-h-screen bg-slate-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Setup Your Seller Profile</h1>
-            <p className="text-gray-600">Create a comprehensive profile to showcase your farm and attract customers</p>
-          </div>
+      <Tabs value={currentStep} onValueChange={setCurrentStep}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="basic">Basic Info</TabsTrigger>
+          <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="hours">Hours</TabsTrigger>
+          <TabsTrigger value="space">Farm Space</TabsTrigger>
+          <TabsTrigger value="media">Media</TabsTrigger>
+        </TabsList>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="profile">Farm Details</TabsTrigger>
-              <TabsTrigger value="media">Media Gallery</TabsTrigger>
-              <TabsTrigger value="farm-spaces">Farm Spaces</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
-
-            <div className="mt-6">
-              <TabsContent value="profile">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Store className="h-5 w-5" />
-                      Farm Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...profileForm}>
-                      <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="space-y-6">
-                        <FormField
-                          control={profileForm.control}
-                          name="farmName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Farm Name *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g., Sunny Acres Farm" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                This will be displayed as your main farm name
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="bio"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Farm Description *</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="Tell customers about your farm, growing practices, and what makes your produce special..."
-                                  className="min-h-[120px]"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="address"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Farm Address *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="123 Farm Road, City, State" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="locationVisibility"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Location Sharing Preference</FormLabel>
-                              <FormControl>
-                                <RadioGroup
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                  className="flex flex-col space-y-2"
-                                >
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="full" id="full" />
-                                    <Label htmlFor="full">Show full address</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="area" id="area" />
-                                    <Label htmlFor="area">Show neighborhood/area only</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="city" id="city" />
-                                    <Label htmlFor="city">Show city only</Label>
-                                  </div>
-                                </RadioGroup>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number</FormLabel>
-                              <FormControl>
-                                <Input placeholder="(555) 123-4567" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                Optional - customers can contact you by phone
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="contactVisibility"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Contact Preference</FormLabel>
-                              <FormControl>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select contact preference" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="email">Email only</SelectItem>
-                                    <SelectItem value="phone">Phone only</SelectItem>
-                                    <SelectItem value="both">Both email and phone</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="operationalDays"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Operating Days *</FormLabel>
-                              <FormDescription>
-                                Select the days when customers can contact you or pick up orders
-                              </FormDescription>
-                              <div className="grid grid-cols-2 gap-4">
-                                {weekDays.map((day) => (
-                                  <div key={day.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={day.id}
-                                      checked={field.value?.includes(day.id)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          field.onChange([...field.value, day.id]);
-                                        } else {
-                                          field.onChange(field.value?.filter((d) => d !== day.id));
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={day.id}>{day.label}</Label>
-                                  </div>
-                                ))}
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="operationalHours"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Operating Hours *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g., 8:00 AM - 6:00 PM" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <Button type="submit" className="w-full" disabled={createProfileMutation.isPending}>
-                          {createProfileMutation.isPending ? "Creating Profile..." : "Create Seller Profile"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="media">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Camera className="h-5 w-5" />
-                      Media Gallery
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Farm Photos & Videos</h3>
-                      <p className="text-gray-600 mb-4">Show customers your farm, growing practices, and products</p>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*,video/*"
-                        onChange={handleMediaUpload}
-                        className="hidden"
-                        id="media-upload"
-                      />
-                      <Label htmlFor="media-upload">
-                        <Button variant="outline" className="cursor-pointer">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Choose Files
-                        </Button>
-                      </Label>
-                    </div>
-
-                    {mediaFiles.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-3">Selected Files ({mediaFiles.length})</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {mediaFiles.map((file, index) => (
-                            <div key={index} className="relative border rounded-lg p-3">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium truncate">{file.name}</p>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeMedia(index)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <p className="text-xs text-gray-500">
-                                {file.type.startsWith('image/') ? 'Image' : 'Video'} • {(file.size / 1024 / 1024).toFixed(1)} MB
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <Button onClick={() => setActiveTab('farm-spaces')} className="w-full">
-                      Continue to Farm Spaces
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="farm-spaces">
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Farm Space Sharing
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600 mb-4">
-                        Offer parts of your land for other farmers or gardeners to use. This is optional but can provide additional income.
-                      </p>
-                      
-                      <Form {...farmSpaceForm}>
-                        <form onSubmit={farmSpaceForm.handleSubmit(onSubmitFarmSpace)} className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={farmSpaceForm.control}
-                              name="squareFootage"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Square Footage</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="number" 
-                                      placeholder="e.g., 100"
-                                      {...field}
-                                      onChange={e => field.onChange(Number(e.target.value))}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={farmSpaceForm.control}
-                              name="soilType"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Soil Type</FormLabel>
-                                  <FormControl>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select soil type" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {soilTypeOptions.map(option => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={farmSpaceForm.control}
-                              name="lightConditions"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Light Conditions</FormLabel>
-                                  <FormControl>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select light conditions" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {lightConditionOptions.map(option => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={farmSpaceForm.control}
-                              name="irrigationOptions"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Irrigation</FormLabel>
-                                  <FormControl>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select irrigation type" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {irrigationOptions.map(option => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={farmSpaceForm.control}
-                            name="managementLevel"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Management Level</FormLabel>
-                                <FormControl>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select management level" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {managementOptions.map(option => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={farmSpaceForm.control}
-                              name="price"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Price ($)</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="number" 
-                                      placeholder="0.00"
-                                      step="0.01"
-                                      {...field}
-                                      onChange={e => field.onChange(Number(e.target.value))}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={farmSpaceForm.control}
-                              name="pricingType"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Pricing Type</FormLabel>
-                                  <FormControl>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select pricing type" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="monthly">Monthly</SelectItem>
-                                        <SelectItem value="seasonal">Seasonal</SelectItem>
-                                        <SelectItem value="flat">Flat Rate</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={farmSpaceForm.control}
-                            name="additionalNotes"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Additional Notes</FormLabel>
-                                <FormControl>
-                                  <Textarea 
-                                    placeholder="Any special rules, requirements, or additional information..."
-                                    {...field} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <Button type="submit" className="w-full">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Farm Space
-                          </Button>
-                        </form>
-                      </Form>
-                    </CardContent>
-                  </Card>
-
-                  {farmSpaces.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Added Farm Spaces ({farmSpaces.length})</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {farmSpaces.map((space, index) => (
-                            <div key={index} className="border rounded-lg p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-medium">Farm Space {index + 1}</h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeFarmSpace(index)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                <div>
-                                  <span className="text-gray-600">Size:</span> {space.squareFootage} sq ft
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Soil:</span> {space.soilType}
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Light:</span> {space.lightConditions}
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Price:</span> ${space.price}/{space.pricingType}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+        {/* Basic Info */}
+        <TabsContent value="basic">
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Farm Information</CardTitle>
+              <CardDescription>Tell customers about your farm or garden.</CardDescription>
+            </CardHeader>
+            <form onSubmit={basicInfoForm.handleSubmit(onBasicInfoSubmit)}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="farmName">Farm Name</Label>
+                  <Input
+                    id="farmName"
+                    placeholder="Sunnydale Organic Farm"
+                    {...basicInfoForm.register('farmName')}
+                  />
+                  {basicInfoForm.formState.errors.farmName && (
+                    <p className="text-red-500 text-sm">{basicInfoForm.formState.errors.farmName.message}</p>
                   )}
-
-                  <Button onClick={() => setActiveTab('preview')} className="w-full">
-                    Preview Profile
-                  </Button>
                 </div>
-              </TabsContent>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Tell customers about your farm, your growing practices, and what makes your produce special..."
+                    rows={6}
+                    {...basicInfoForm.register('bio')}
+                  />
+                  {basicInfoForm.formState.errors.bio && (
+                    <p className="text-red-500 text-sm">{basicInfoForm.formState.errors.bio.message}</p>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit">Next: Contact Information</Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </TabsContent>
 
-              <TabsContent value="preview">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profile Preview</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-12">
-                      <Store className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-xl font-medium text-gray-900 mb-2">Profile Setup Complete!</h3>
-                      <p className="text-gray-600 mb-6">
-                        Your seller profile is ready. You can now start listing products and offering farm spaces.
-                      </p>
-                      <div className="flex gap-4 justify-center">
-                        <Button variant="outline" onClick={() => navigate('/profile')}>
-                          View Profile
-                        </Button>
-                        <Button onClick={() => navigate('/create-listing')}>
-                          Create First Listing
-                        </Button>
+        {/* Contact Info */}
+        <TabsContent value="contact">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact Information</CardTitle>
+              <CardDescription>How customers can reach you.</CardDescription>
+            </CardHeader>
+            <form onSubmit={contactInfoForm.handleSubmit(onContactInfoSubmit)}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address">Farm Address</Label>
+                  <Input
+                    id="address"
+                    placeholder="123 Farm Lane, Agricultural City, AC 12345"
+                    {...contactInfoForm.register('address')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Location Visibility</Label>
+                  <Select
+                    onValueChange={(value) => contactInfoForm.setValue('locationVisibility', value as 'full' | 'area' | 'city')}
+                    defaultValue={contactInfoForm.getValues('locationVisibility')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose how to display your location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Address</SelectItem>
+                      <SelectItem value="area">General Area Only</SelectItem>
+                      <SelectItem value="city">City/Zip Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+1 (555) 123-4567"
+                    {...contactInfoForm.register('phone')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact Preference</Label>
+                  <Select
+                    onValueChange={(value) => contactInfoForm.setValue('contactVisibility', value as 'phone' | 'email' | 'both')}
+                    defaultValue={contactInfoForm.getValues('contactVisibility')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose how customers can contact you" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="phone">Phone Only</SelectItem>
+                      <SelectItem value="email">Email Only</SelectItem>
+                      <SelectItem value="both">Both Phone and Email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={() => setCurrentStep('basic')}>Back</Button>
+                <Button type="submit">Next: Operational Hours</Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </TabsContent>
+
+        {/* Hours */}
+        <TabsContent value="hours">
+          <Card>
+            <CardHeader>
+              <CardTitle>Operational Hours</CardTitle>
+              <CardDescription>When customers can visit or pick up produce.</CardDescription>
+            </CardHeader>
+            <form onSubmit={hoursForm.handleSubmit(onHoursSubmit)}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Days Open</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                      <div key={day} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={day}
+                          value={day}
+                          onChange={(e) => {
+                            const current = hoursForm.getValues('days') || [];
+                            if (e.target.checked) {
+                              hoursForm.setValue('days', [...current, day]);
+                            } else {
+                              hoursForm.setValue('days', current.filter(d => d !== day));
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <Label htmlFor={day}>{day}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hours">Hours</Label>
+                  <Input
+                    id="hours"
+                    placeholder="9:00 AM - 5:00 PM"
+                    {...hoursForm.register('hours')}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={() => setCurrentStep('contact')}>Back</Button>
+                <Button type="submit">Next: Farm Space</Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </TabsContent>
+
+        {/* Farm Space */}
+        <TabsContent value="space">
+          <Card>
+            <CardHeader>
+              <CardTitle>Farm Space Sharing</CardTitle>
+              <CardDescription>Offer space on your land for others to garden or farm.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="has-space"
+                  checked={profileData.space.hasSpace}
+                  onCheckedChange={handleSpaceToggle}
+                />
+                <Label htmlFor="has-space">I have space available to share</Label>
+              </div>
+
+              {profileData.space.hasSpace && (
+                <form onSubmit={farmSpaceForm.handleSubmit(onSpaceSubmit)} className="space-y-4 mt-4 p-4 border rounded-md">
+                  <div className="space-y-2">
+                    <Label htmlFor="squareFootage">Square Footage</Label>
+                    <Input
+                      id="squareFootage"
+                      type="number"
+                      placeholder="500"
+                      {...farmSpaceForm.register('squareFootage', { valueAsNumber: true })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="soilType">Soil Type</Label>
+                    <Select
+                      onValueChange={(value) => farmSpaceForm.setValue('soilType', value)}
+                      defaultValue={farmSpaceForm.getValues('soilType')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select soil type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="loam">Loam</SelectItem>
+                        <SelectItem value="clay">Clay</SelectItem>
+                        <SelectItem value="sandy">Sandy</SelectItem>
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                        <SelectItem value="custom">Custom (describe in notes)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="lightConditions">Light Conditions</Label>
+                    <Select
+                      onValueChange={(value) => farmSpaceForm.setValue('lightConditions', value)}
+                      defaultValue={farmSpaceForm.getValues('lightConditions')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select light conditions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full_sun">Full Sun</SelectItem>
+                        <SelectItem value="partial_shade">Partial Shade</SelectItem>
+                        <SelectItem value="mostly_shaded">Mostly Shaded</SelectItem>
+                        <SelectItem value="custom">Custom (describe in notes)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="irrigation">Irrigation Options</Label>
+                    <Select
+                      onValueChange={(value) => farmSpaceForm.setValue('irrigationOptions', value)}
+                      defaultValue={farmSpaceForm.getValues('irrigationOptions')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select irrigation options" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">Manual Watering</SelectItem>
+                        <SelectItem value="automated">Automated System</SelectItem>
+                        <SelectItem value="natural">Natural/Rain-fed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="management">Management Level</Label>
+                    <Select
+                      onValueChange={(value) => farmSpaceForm.setValue('managementLevel', value)}
+                      defaultValue={farmSpaceForm.getValues('managementLevel')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select management level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hands_off">Hands-off (minimal oversight)</SelectItem>
+                        <SelectItem value="daily_visit">Daily Visit Required</SelectItem>
+                        <SelectItem value="multiple_visits">Multiple Daily Visits</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Price ($)</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        placeholder="150"
+                        {...farmSpaceForm.register('price', { valueAsNumber: true })}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="pricingType">Pricing Type</Label>
+                      <Select
+                        onValueChange={(value) => farmSpaceForm.setValue('pricingType', value as 'monthly' | 'seasonal' | 'flat')}
+                        defaultValue={farmSpaceForm.getValues('pricingType')}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select pricing type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="seasonal">Seasonal</SelectItem>
+                          <SelectItem value="flat">Flat Rate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="additionalNotes">Additional Notes</Label>
+                    <Textarea
+                      id="additionalNotes"
+                      placeholder="Any additional details about the space..."
+                      rows={4}
+                      {...farmSpaceForm.register('additionalNotes')}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full">Add Farm Space</Button>
+
+                  {profileData.space.spaces.length > 0 && (
+                    <div className="mt-4">
+                      <h3 className="font-medium mb-2">Added Spaces ({profileData.space.spaces.length})</h3>
+                      <div className="space-y-2">
+                        {profileData.space.spaces.map((space, index) => (
+                          <div key={index} className="p-2 bg-slate-50 rounded-md">
+                            <p className="font-medium">{space.squareFootage} sq ft - ${space.price}/{space.pricingType}</p>
+                            <p className="text-sm text-slate-500">{space.soilType} soil, {space.lightConditions.replace('_', ' ')}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-      </div>
-    </>
+                  )}
+                </form>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={() => setCurrentStep('hours')}>Back</Button>
+              <Button onClick={() => setCurrentStep('media')}>Next: Media</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Media */}
+        <TabsContent value="media">
+          <Card>
+            <CardHeader>
+              <CardTitle>Farm Media Gallery</CardTitle>
+              <CardDescription>Add photos and videos of your farm.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 p-4 border rounded-md">
+                    <h3 className="font-medium">Add Photo</h3>
+                    <Input id="photoUrl" placeholder="Photo URL" />
+                    <Input id="photoCaption" placeholder="Caption (optional)" />
+                    <Button 
+                      onClick={() => {
+                        const url = (document.getElementById('photoUrl') as HTMLInputElement).value;
+                        const caption = (document.getElementById('photoCaption') as HTMLInputElement).value;
+                        if (url) {
+                          onAddMedia('photo', url, caption);
+                          (document.getElementById('photoUrl') as HTMLInputElement).value = '';
+                          (document.getElementById('photoCaption') as HTMLInputElement).value = '';
+                        }
+                      }}
+                      className="w-full mt-2"
+                    >
+                      Add Photo
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2 p-4 border rounded-md">
+                    <h3 className="font-medium">Add Video</h3>
+                    <Input id="videoUrl" placeholder="Video URL" />
+                    <Input id="videoCaption" placeholder="Caption (optional)" />
+                    <Button 
+                      onClick={() => {
+                        const url = (document.getElementById('videoUrl') as HTMLInputElement).value;
+                        const caption = (document.getElementById('videoCaption') as HTMLInputElement).value;
+                        if (url) {
+                          onAddMedia('video', url, caption);
+                          (document.getElementById('videoUrl') as HTMLInputElement).value = '';
+                          (document.getElementById('videoCaption') as HTMLInputElement).value = '';
+                        }
+                      }}
+                      className="w-full mt-2"
+                    >
+                      Add Video
+                    </Button>
+                  </div>
+                </div>
+                
+                {profileData.media.uploads.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-2">Media Gallery ({profileData.media.uploads.length})</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {profileData.media.uploads.map((item, index) => (
+                        <div key={index} className="relative">
+                          {item.mediaType === 'photo' ? (
+                            <img
+                              src={item.url}
+                              alt={item.caption || `Farm photo ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-md"
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-slate-200 flex items-center justify-center rounded-md">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )}
+                          {item.caption && (
+                            <p className="text-xs mt-1 text-center text-slate-600 truncate">{item.caption}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={() => setCurrentStep('space')}>Back</Button>
+              <Button 
+                onClick={handleSubmitProfile}
+                disabled={createProfileMutation.isPending}
+              >
+                {createProfileMutation.isPending ? 'Creating Profile...' : 'Complete Setup'}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

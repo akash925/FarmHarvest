@@ -2,7 +2,10 @@ import {
   users, type User, type InsertUser,
   listings, type Listing, type InsertListing,
   orders, type Order, type InsertOrder,
-  reviews, type Review, type InsertReview
+  reviews, type Review, type InsertReview,
+  sellerProfiles, type SellerProfile, type InsertSellerProfile,
+  profileMedia, type ProfileMedia, type InsertProfileMedia,
+  farmSpaces, type FarmSpace, type InsertFarmSpace
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc, gte, like, lte, or, sql } from "drizzle-orm";
@@ -274,6 +277,82 @@ export class DatabaseStorage implements IStorage {
     }
     
     return db.select().from(users).where(inArray(users.id, sellerIds));
+  }
+
+  // Enhanced Seller Profile methods
+  async getSellerProfile(userId: number): Promise<SellerProfile | undefined> {
+    const [profile] = await db.select().from(sellerProfiles).where(eq(sellerProfiles.userId, userId));
+    return profile;
+  }
+  
+  async createSellerProfile(profile: InsertSellerProfile): Promise<SellerProfile> {
+    const [newProfile] = await db.insert(sellerProfiles).values(profile).returning();
+    return newProfile;
+  }
+  
+  async updateSellerProfile(userId: number, profileData: Partial<InsertSellerProfile>): Promise<SellerProfile> {
+    const [profile] = await db.select().from(sellerProfiles).where(eq(sellerProfiles.userId, userId));
+    
+    if (!profile) {
+      throw new Error(`Seller profile not found for user ${userId}`);
+    }
+    
+    const [updatedProfile] = await db
+      .update(sellerProfiles)
+      .set({ ...profileData, updatedAt: new Date() })
+      .where(eq(sellerProfiles.id, profile.id))
+      .returning();
+    
+    return updatedProfile;
+  }
+  
+  // Profile Media methods
+  async getProfileMedia(sellerProfileId: number): Promise<ProfileMedia[]> {
+    return db.select().from(profileMedia).where(eq(profileMedia.sellerProfileId, sellerProfileId));
+  }
+  
+  async createProfileMedia(media: InsertProfileMedia): Promise<ProfileMedia> {
+    const [newMedia] = await db.insert(profileMedia).values(media).returning();
+    return newMedia;
+  }
+  
+  async deleteProfileMedia(id: number): Promise<boolean> {
+    await db.delete(profileMedia).where(eq(profileMedia.id, id));
+    return true; // Assuming deletion was successful
+  }
+  
+  // Farm Space methods
+  async getFarmSpace(id: number): Promise<FarmSpace | undefined> {
+    const [space] = await db.select().from(farmSpaces).where(eq(farmSpaces.id, id));
+    return space;
+  }
+  
+  async getFarmSpacesByProfile(sellerProfileId: number): Promise<FarmSpace[]> {
+    return db.select().from(farmSpaces).where(eq(farmSpaces.sellerProfileId, sellerProfileId));
+  }
+  
+  async getAllAvailableFarmSpaces(): Promise<FarmSpace[]> {
+    return db.select().from(farmSpaces).where(eq(farmSpaces.status, "available"));
+  }
+  
+  async createFarmSpace(farmSpace: InsertFarmSpace): Promise<FarmSpace> {
+    const [newSpace] = await db.insert(farmSpaces).values(farmSpace).returning();
+    return newSpace;
+  }
+  
+  async updateFarmSpace(id: number, farmSpaceData: Partial<InsertFarmSpace>): Promise<FarmSpace> {
+    const [updatedSpace] = await db
+      .update(farmSpaces)
+      .set({ ...farmSpaceData, updatedAt: new Date() })
+      .where(eq(farmSpaces.id, id))
+      .returning();
+    
+    return updatedSpace;
+  }
+  
+  async deleteFarmSpace(id: number): Promise<boolean> {
+    await db.delete(farmSpaces).where(eq(farmSpaces.id, id));
+    return true; // Assuming deletion was successful
   }
 }
 

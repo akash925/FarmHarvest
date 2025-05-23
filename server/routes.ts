@@ -240,6 +240,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Direct login endpoint for specific user account (for development)
+  app.post("/api/auth/direct-login/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get user by ID
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Set session to this user ID
+      req.session.userId = user.id;
+      
+      // Return success
+      res.json({ success: true, message: "Logged in as " + user.name, user });
+    } catch (error: any) {
+      console.error("Direct login error:", error);
+      res.status(500).json({ message: "Failed to set user session", error: error.message });
+    }
+  });
+  
+  // Enhanced seller profile endpoints
+  
+  // Get seller profile
+  app.get("/api/seller-profiles/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const profile = await storage.getSellerProfile(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Seller profile not found" });
+      }
+      
+      // Get related data for a complete profile
+      const media = await storage.getProfileMedia(profile.id);
+      const farmSpaces = await storage.getFarmSpacesByProfile(profile.id);
+      const user = await storage.getUserById(userId);
+      const listings = await storage.getListingsByUser(userId);
+      
+      res.json({
+        profile,
+        media,
+        farmSpaces,
+        user,
+        listings
+      });
+    } catch (error: any) {
+      console.error("Error fetching seller profile:", error);
+      res.status(500).json({ message: "Failed to fetch seller profile", error: error.message });
+    }
+  });
+  
+  // Create seller profile
+  app.post("/api/seller-profiles", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { profile } = req.body;
+      
+      // Validate that this user doesn't already have a profile
+      const existingProfile = await storage.getSellerProfile(req.session.userId);
+      
+      if (existingProfile) {
+        return res.status(400).json({ message: "User already has a seller profile" });
+      }
+      
+      // Create profile with the current user ID
+      const newProfile = await storage.createSellerProfile({
+        ...profile,
+        userId: req.session.userId
+      });
+      
+      res.status(201).json({ profile: newProfile });
+    } catch (error: any) {
+      console.error("Error creating seller profile:", error);
+      res.status(500).json({ message: "Failed to create seller profile", error: error.message });
+    }
+  });
+  
+  // Update seller profile
+  app.patch("/api/seller-profiles/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Check if requesting user is the owner
+      if (!req.session.userId || req.session.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to update this profile" });
+      }
+      
+      const { profile } = req.body;
+      
+      const updatedProfile = await storage.updateSellerProfile(userId, profile);
+      
+      res.json({ profile: updatedProfile });
+    } catch (error: any) {
+      console.error("Error updating seller profile:", error);
+      res.status(500).json({ message: "Failed to update seller profile", error: error.message });
+    }
+  });
+  
+  // Farm spaces endpoints
+  
+  // Get all available farm spaces
+  app.get("/api/farm-spaces/available", async (req, res) => {
+    try {
+      const spaces = await storage.getAllAvailableFarmSpaces();
+      res.json({ spaces });
+    } catch (error: any) {
+      console.error("Error fetching available farm spaces:", error);
+      res.status(500).json({ message: "Failed to fetch farm spaces", error: error.message });
+    }
+  });
+  
+  // Create a farm space
+  app.post("/api/farm-spaces", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { farmSpace } = req.body;
+      
+      // Get the user's seller profile
+      const profile = await storage.getSellerProfile(req.session.userId);
+      
+      if (!profile) {
+        return res.status(400).json({ message: "You must create a seller profile first" });
+      }
+      
+      // Create farm space
+      const newSpace = await storage.createFarmSpace({
+        ...farmSpace,
+        sellerProfileId: profile.id
+      });
+      
+      res.status(201).json({ farmSpace: newSpace });
+    } catch (error: any) {
+      console.error("Error creating farm space:", error);
+      res.status(500).json({ message: "Failed to create farm space", error: error.message });
+    }
+  });
+  
+  // Profile media endpoints
+  
+  // Add media to profile
+  app.post("/api/profile-media", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { media } = req.body;
+      
+      // Get the user's seller profile
+      const profile = await storage.getSellerProfile(req.session.userId);
+      
+      if (!profile) {
+        return res.status(400).json({ message: "You must create a seller profile first" });
+      }
+      
+      // Create profile media
+      const newMedia = await storage.createProfileMedia({
+        ...media,
+        sellerProfileId: profile.id
+      });
+      
+      res.status(201).json({ media: newMedia });
+    } catch (error: any) {
+      console.error("Error adding profile media:", error);
+      res.status(500).json({ message: "Failed to add profile media", error: error.message });
+    }
+  });
+  
+  // Delete profile media
+  app.delete("/api/profile-media/:id", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const mediaId = parseInt(req.params.id);
+      
+      if (isNaN(mediaId)) {
+        return res.status(400).json({ message: "Invalid media ID" });
+      }
+      
+      // Delete the media
+      await storage.deleteProfileMedia(mediaId);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting profile media:", error);
+      res.status(500).json({ message: "Failed to delete profile media", error: error.message });
+    }
+  });
+  
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy(() => {
       res.status(200).json({ message: "Logged out" });
