@@ -1,6 +1,9 @@
 import { Link } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CTASection() {
+  const { user, isAuthenticated } = useAuth();
+  
   return (
     <section className="bg-primary-50 py-16 md:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,6 +19,16 @@ export default function CTASection() {
                 Browse Listings
               </Link>
             </div>
+            
+            {isAuthenticated && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-800">For Farmers & Growers</h3>
+                <p className="text-green-700 text-sm mb-3">Create a richer profile with photos, farm spaces, and more!</p>
+                <Link href="/seller-profile-setup" className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition duration-150 ease-in-out">
+                  Setup Enhanced Profile
+                </Link>
+              </div>
+            )}
           </div>
           <div className="md:w-2/5">
             {/* A hand holding fresh vegetables from a garden */}
