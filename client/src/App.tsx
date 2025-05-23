@@ -11,6 +11,8 @@ import EditProfile from "@/pages/EditProfile";
 import Checkout from "@/pages/Checkout";
 import MyOrders from "@/pages/MyOrders";
 import Auth from "@/pages/FixedAuth";
+import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
+import SellerProfileSetup from "@/pages/SellerProfileSetup";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,6 +45,8 @@ function App() {
             <Route path="/checkout/:listingId" component={Checkout} />
             <Route path="/orders" component={MyOrders} />
             <Route path="/auth" component={Auth} />
+            <Route path="/seller-profile/:id" component={EnhancedSellerProfile} />
+            <Route path="/seller-profile-setup" component={SellerProfileSetup} />
             <Route component={NotFound} />
           </Switch>
         </main>

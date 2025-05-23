@@ -58,36 +58,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   // Simple auth session endpoint to check if user is logged in
   app.get("/api/auth/session", async (req, res) => {
-    // For development purposes: auto-login with a test user if not logged in
-    if (!req.session.userId) {
-      try {
-        // Check if test user exists
-        let testUser = await storage.getUserByEmail("test@example.com");
-        
-        if (!testUser) {
-          // Create a test user if it doesn't exist
-          testUser = await storage.createUser({
-            name: "Test User",
-            email: "test@example.com",
-            authType: "local",
-            authId: "test123",
-            image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-            zip: "90210",
-            about: "I'm a test user for development purposes."
-          });
-          console.log("Created test user for auto-login:", testUser.id);
-        }
-        
-        // Auto-login with test user
-        req.session.userId = testUser.id;
-        console.log("Auto-logged in with test user:", testUser.id);
-      } catch (error) {
-        console.error("Error creating test user:", error);
-        return res.status(500).json({ message: "Error setting up test user" });
-      }
-    }
-    
-    // Add the email signup and signin endpoints after the auto-login logic
+    // Auto-login feature disabled since we have created real accounts
+    // We'll keep the existing session which should contain our Akash account
 
     // Now check session and return user data
     if (req.session.userId) {
