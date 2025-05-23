@@ -1,0 +1,80 @@
+Technical Implementation Details:
+Frontend:
+
+Use React.js, Next.js, Tailwind CSS for design consistency.
+
+Optimize for responsive design across mobile and desktop.
+
+Interactive components clearly marked for intuitive navigation.
+
+Media uploads with clear previews and easy file management.
+
+Include clear toggles and dropdowns for preferences to maintain simplicity.
+
+Backend:
+
+Extend the existing PostgreSQL/Supabase schema effectively.
+
+Ensure relational integrity between profiles, listings, and farm space listings.
+
+Implement secure and efficient file storage (consider Supabase storage buckets for media).
+
+Validate data inputs robustly (hours, soil/light types, pricing structure).
+
+Automatically manage inventory and listing status updates based on seller input.
+
+Suggested Database Schema Additions:
+seller_profiles Table (Extended Fields)
+id, user_id, farm_name, bio, address, location_visibility, phone, email, contact_visibility, operational_hours (JSON), created_at
+
+profile_media Table
+id, seller_profile_id, media_type (photo/video), url, caption, created_at
+
+farm_spaces Table
+id, seller_profile_id, square_footage, soil_type, light_conditions, irrigation_options, management_level, additional_notes, price, pricing_type (monthly/seasonal/flat), status (available/booked), created_at
+
+User Interaction Workflow:
+Seller Setup:
+Seller creates or edits profile:
+
+Provides detailed farm info, uploads media.
+
+Specifies operational hours and visibility preferences.
+
+Optionally, seller navigates to "Farm Space Available" tab to list land:
+
+Inputs comprehensive data (size, conditions, management, etc.).
+
+Sets clear pricing terms.
+
+Media upload (photos/videos).
+
+Buyer Interaction:
+Buyer views engaging seller profiles.
+
+Buyer checks detailed info including photos, videos, and available farm spaces.
+
+Buyer chooses direct booking or inquires more about farm spaces:
+
+"Book Now": transaction immediately processed via Stripe Connect.
+
+"Inquire": opens integrated messaging for follow-up communication.
+
+Legal & Liability Integration:
+Ensure user consent clearly collected for address/location sharing.
+
+Integrate explicit disclaimers and liability waivers for interactions concerning farm space usage.
+
+Prompt Conclusion:
+Immediately begin implementation of these seller profiles and farm space functionalities, integrating smoothly into the current Farm Direct app structure. Aim for intuitive user experience, robust backend performance, and scalable data management practices.
+
+Check-in at completion of each major step:
+
+Seller profile extension
+
+Media upload integration
+
+Farm space feature integration
+
+Buyer/Seller interaction (booking/inquiry)
+

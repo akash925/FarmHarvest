@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, foreignKey, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -78,6 +78,67 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
   createdAt: true
 });
 
+// Enhanced seller profiles table
+export const sellerProfiles = pgTable("seller_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  farmName: text("farm_name"),
+  bio: text("bio"),
+  address: text("address"),
+  locationVisibility: text("location_visibility").default("city"), // full, area, city
+  phone: text("phone"),
+  email: text("email"),
+  contactVisibility: text("contact_visibility").default("email"), // phone, email, both
+  operationalHours: json("operational_hours"), // JSON structure for hours/days
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Profile media table for photos and videos
+export const profileMedia = pgTable("profile_media", {
+  id: serial("id").primaryKey(),
+  sellerProfileId: integer("seller_profile_id").notNull().references(() => sellerProfiles.id),
+  mediaType: text("media_type").notNull(), // photo, video
+  url: text("url").notNull(),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Farm spaces available for rent/sharing
+export const farmSpaces = pgTable("farm_spaces", {
+  id: serial("id").primaryKey(),
+  sellerProfileId: integer("seller_profile_id").notNull().references(() => sellerProfiles.id),
+  squareFootage: integer("square_footage"),
+  soilType: text("soil_type"), // loam, clay, sandy, mixed, custom
+  lightConditions: text("light_conditions"), // full_sun, partial_shade, mostly_shaded, custom
+  irrigationOptions: text("irrigation_options"), // manual, automated, natural
+  managementLevel: text("management_level"), // hands_off, daily_visit, multiple_visits
+  additionalNotes: text("additional_notes"),
+  price: integer("price").notNull(), // in cents
+  pricingType: text("pricing_type").notNull(), // monthly, seasonal, flat
+  status: text("status").default("available"), // available, booked, unavailable
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Create insert schemas for new tables
+export const insertSellerProfileSchema = createInsertSchema(sellerProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertProfileMediaSchema = createInsertSchema(profileMedia).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertFarmSpaceSchema = createInsertSchema(farmSpaces).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -90,3 +151,12 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
+
+export type SellerProfile = typeof sellerProfiles.$inferSelect;
+export type InsertSellerProfile = z.infer<typeof insertSellerProfileSchema>;
+
+export type ProfileMedia = typeof profileMedia.$inferSelect;
+export type InsertProfileMedia = z.infer<typeof insertProfileMediaSchema>;
+
+export type FarmSpace = typeof farmSpaces.$inferSelect;
+export type InsertFarmSpace = z.infer<typeof insertFarmSpaceSchema>;

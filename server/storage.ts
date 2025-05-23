@@ -42,6 +42,24 @@ export interface IStorage {
   
   // Top sellers
   getTopSellers(limit?: number): Promise<User[]>;
+  
+  // Seller profile methods
+  getSellerProfile(userId: number): Promise<SellerProfile | undefined>;
+  createSellerProfile(profile: InsertSellerProfile): Promise<SellerProfile>;
+  updateSellerProfile(userId: number, profile: Partial<InsertSellerProfile>): Promise<SellerProfile>;
+  
+  // Profile media methods
+  getProfileMedia(sellerProfileId: number): Promise<ProfileMedia[]>;
+  createProfileMedia(media: InsertProfileMedia): Promise<ProfileMedia>;
+  deleteProfileMedia(id: number): Promise<boolean>;
+  
+  // Farm space methods
+  getFarmSpace(id: number): Promise<FarmSpace | undefined>;
+  getFarmSpacesByProfile(sellerProfileId: number): Promise<FarmSpace[]>;
+  getAllAvailableFarmSpaces(): Promise<FarmSpace[]>;
+  createFarmSpace(farmSpace: InsertFarmSpace): Promise<FarmSpace>;
+  updateFarmSpace(id: number, farmSpace: Partial<InsertFarmSpace>): Promise<FarmSpace>;
+  deleteFarmSpace(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
