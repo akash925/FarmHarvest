@@ -42,26 +42,38 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      try {
-        const res = await fetch("/api/auth/session", {
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
+  // Helper function to check auth session - can be called whenever needed
+  const checkAuth = async () => {
+    try {
+      console.log("Checking authentication session...");
+      const res = await fetch("/api/auth/session", {
+        credentials: "include",
+        headers: {
+          // Prevent caching issues
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
-      } catch (error) {
-        console.error("Failed to check authentication:", error);
-      } finally {
-        // Always set to false to prevent infinite loading
-        setIsInitializing(false);
-      }
-    };
+      });
 
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Session check received user:", data.user);
+        setUser(data.user);
+        return true;
+      } else {
+        console.log("Session check failed:", res.status);
+        return false;
+      }
+    } catch (error) {
+      console.error("Failed to check authentication:", error);
+      return false;
+    } finally {
+      // Always set to false to prevent infinite loading
+      setIsInitializing(false);
+    }
+  };
+
+  useEffect(() => {
     // Add a timeout to ensure we don't get stuck in loading state
     const timeoutId = setTimeout(() => {
       setIsInitializing(false);
@@ -77,9 +89,18 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     try {
       // Handle email/password authentication
       if (provider === "email" && credentials) {
-        const res = await apiRequest("POST", "/api/auth/signin", {
-          email: credentials.email,
-          password: credentials.password
+        console.log("Attempting login with:", credentials.email);
+        
+        const res = await fetch("/api/auth/signin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: credentials.email,
+            password: credentials.password
+          })
         });
         
         if (!res.ok) {
@@ -88,7 +109,11 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         }
         
         const data = await res.json();
+        console.log("Login successful:", data.user);
         setUser(data.user);
+        
+        // Force a refresh to ensure the UI updates
+        window.location.href = "/";
         return;
       }
 
