@@ -10,7 +10,7 @@ import UserProfile from "@/pages/UserProfile";
 import EditProfile from "@/pages/EditProfile";
 import Checkout from "@/pages/Checkout";
 import MyOrders from "@/pages/MyOrders";
-import Auth from "@/pages/SimpleAuth";
+import Auth from "@/pages/FixedAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/use-auth";

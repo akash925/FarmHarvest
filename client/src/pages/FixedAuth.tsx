@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { apiRequest } from '@/lib/queryClient';
 
-export default function SimpleAuth() {
+export default function FixedAuth() {
   // Basic state management
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -81,7 +81,7 @@ export default function SimpleAuth() {
       setIsLoading(true);
       
       // Prepare user data for API
-      const userData = {
+      const signupData = {
         name,
         email,
         password,
@@ -94,28 +94,26 @@ export default function SimpleAuth() {
       };
       
       // Send signup request
-      const response = await apiRequest('POST', '/api/auth/signup', userData);
+      const response = await apiRequest('POST', '/api/auth/signup', signupData);
       
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create account');
       }
       
-      // Get the user data and automatically sign them in
-      const userResponse = await response.json();
-      
-      // Force a refresh of the auth session
-      await apiRequest('GET', '/api/auth/session');
+      // Try to sign in with the new credentials
+      try {
+        await signIn('email', { email, password });
+      } catch (error) {
+        console.error('Auto sign-in failed, redirecting anyway', error);
+      }
       
       toast({
         title: 'Account Created!',
         description: 'You have successfully created an account and signed in.',
       });
       
-      // Short delay before redirecting to ensure session is set
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
+      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Signup Failed',
@@ -135,16 +133,7 @@ export default function SimpleAuth() {
     try {
       setIsLoading(true);
       
-      // Send signin request
-      const response = await apiRequest('POST', '/api/auth/signin', {
-        email,
-        password,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Invalid email or password');
-      }
+      await signIn('email', { email, password });
       
       toast({
         title: 'Welcome Back!',
