@@ -261,11 +261,17 @@ export default function FarmSpaceDetail() {
                 
                 <Separator />
                 
-                <Link href={`/farm-spaces/${id}/message`}>
-                  <Button className="w-full" size="lg">
-                    Send Message
-                  </Button>
-                </Link>
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => {
+                    if (sellerData?.user?.email) {
+                      window.location.href = `mailto:${sellerData.user.email}?subject=Inquiry about ${farmSpace.title}&body=Hi! I'm interested in renting your farm space "${farmSpace.title}". Could you tell me more about it?`;
+                    }
+                  }}
+                >
+                  Send Message
+                </Button>
                 
                 <Link href={`/users/${farmSpace.sellerProfileId}`}>
                   <Button variant="outline" className="w-full">
