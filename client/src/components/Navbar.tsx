@@ -36,27 +36,15 @@ export default function Navbar() {
             </Link>
           </div>
           
-          {/* Search Bar (Medium screens and up) */}
-          <div className="hidden md:block flex-1 max-w-md mx-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-slate-400" />
-              </div>
-              <input 
-                type="text" 
-                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 sm:text-sm" 
-                placeholder="Search by location or product..." 
-              />
-            </div>
-          </div>
+
           
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center space-x-4">
             <Link href="/listings" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
-              Browse
+              Buy
             </Link>
             <Link href="/farm-spaces" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
-              Rent Space
+              Lease
             </Link>
             <Link href="/listings/new" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Sell
@@ -133,14 +121,14 @@ export default function Navbar() {
               className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Browse
+              Buy
             </Link>
             <Link 
               href="/farm-spaces" 
               className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Rent Space
+              Lease
             </Link>
             <Link 
               href="/listings/new" 

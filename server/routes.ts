@@ -1061,6 +1061,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch farm spaces", error: error.message });
     }
   });
+
+  // Get individual farm space
+  app.get("/api/farm-spaces/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid farm space ID" });
+      }
+      
+      const farmSpace = await storage.getFarmSpace(id);
+      
+      if (!farmSpace) {
+        return res.status(404).json({ message: "Farm space not found" });
+      }
+      
+      res.json(farmSpace);
+    } catch (error: any) {
+      console.error("Error fetching farm space:", error);
+      res.status(500).json({ message: "Failed to fetch farm space", error: error.message });
+    }
+  });
   
   const httpServer = createServer(app);
   return httpServer;
