@@ -1,265 +1,215 @@
-import { useRoute, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
-import { Helmet } from 'react-helmet-async';
-import { useAuth } from '@/hooks/use-auth';
-import { 
-  Card, 
-  CardContent,
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Edit, 
-  MapPin, 
-  Star, 
-  AlertTriangle,
-  Loader 
-} from 'lucide-react';
-import ListingCard from '@/components/ListingCard';
+import { useRoute } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MapPin, Star, Package, Calendar, Mail } from "lucide-react";
+import { User, Listing, Review } from "@shared/schema";
 
 export default function UserProfile() {
-  const [, params] = useRoute('/users/:id');
-  const [, navigate] = useLocation();
-  const { user: currentUser } = useAuth();
-  const userId = params?.id;
-  
-  const { data: userData, isLoading: isLoadingUser, error: userError } = useQuery({
+  const [, params] = useRoute("/users/:id");
+  const userId = params?.id ? parseInt(params.id) : null;
+
+  const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: [`/api/users/${userId}`],
+    enabled: !!userId,
   });
-  
-  const { data: userListingsData, isLoading: isLoadingListings } = useQuery({
-    queryKey: [`/api/listings?userId=${userId}`],
+
+  const { data: listingsData, isLoading: listingsLoading } = useQuery<{ listings: Listing[] }>({
+    queryKey: [`/api/listings/user/${userId}`],
+    enabled: !!userId,
   });
-  
-  const { data: reviewsData, isLoading: isLoadingReviews } = useQuery({
+
+  const { data: reviewsData, isLoading: reviewsLoading } = useQuery<{ reviews: Review[] }>({
     queryKey: [`/api/reviews/seller/${userId}`],
+    enabled: !!userId,
   });
-  
-  const user = userData?.user;
-  const listings = userListingsData?.listings || [];
-  const reviews = reviewsData?.reviews || [];
-  
-  // Calculate average rating
-  const averageRating = reviews.length > 0
-    ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
-    : 0;
-  
-  const isCurrentUserProfile = currentUser?.id === parseInt(userId!);
-  
-  // Loading state
-  if (isLoadingUser) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader className="h-8 w-8 animate-spin text-primary-400" />
-      </div>
-    );
+
+  if (!userId) {
+    return <div className="container mx-auto px-4 py-8">User not found</div>;
   }
-  
-  // Error state
-  if (userError || !user) {
+
+  if (userLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">User Not Found</h1>
-          <p className="text-slate-600 mb-6">The user profile you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate('/')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Home
-          </Button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
         </div>
       </div>
     );
   }
-  
+
+  if (!user) {
+    return <div className="container mx-auto px-4 py-8">User not found</div>;
+  }
+
+  const averageRating = reviewsData?.reviews?.length 
+    ? reviewsData.reviews.reduce((sum, review) => sum + review.rating, 0) / reviewsData.reviews.length 
+    : 0;
+
   return (
-    <>
-      <Helmet>
-        <title>{user.name} | FarmDirect</title>
-        <meta
-          name="description"
-          content={`Check out ${user.name}'s profile and available produce on FarmDirect. Fresh local produce for pickup.`}
-        />
-      </Helmet>
-      
-      <div className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Button
-            variant="ghost"
-            className="mb-6 text-slate-600 hover:text-slate-900"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to home
-          </Button>
-          
-          <div className="mb-8">
-            <div className="sm:flex sm:items-center sm:justify-between">
-              <div className="sm:flex sm:items-center">
-                <div className="h-24 w-24 rounded-full overflow-hidden bg-slate-100">
-                  <img
-                    src={user.image || 'https://via.placeholder.com/96x96?text=User'}
-                    alt={user.name || 'User'}
-                    className="h-full w-full object-cover"
-                  />
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Profile Header */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-6">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
+                <AvatarFallback className="text-2xl">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-3xl font-bold">{user.name || "Anonymous User"}</h1>
+                  <Button
+                    onClick={() => {
+                      if (user.email) {
+                        window.location.href = `mailto:${user.email}?subject=Hello from Farm Direct`;
+                      }
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Contact
+                  </Button>
                 </div>
-                <div className="mt-4 sm:mt-0 sm:ml-6">
-                  <h1 className="text-2xl font-display font-bold text-slate-900">{user.name}</h1>
+                
+                <div className="flex items-center gap-4 text-muted-foreground">
                   {user.zip && (
-                    <p className="text-slate-600 flex items-center mt-1">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {user.zip}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      <span>{user.zip}</span>
+                    </div>
                   )}
-                  {reviews.length > 0 && (
-                    <div className="flex items-center mt-2">
+                  
+                  {reviewsData?.reviews && reviewsData.reviews.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span>{averageRating.toFixed(1)} ({reviewsData.reviews.length} reviews)</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                
+                {user.about && (
+                  <p className="text-muted-foreground mt-2">{user.about}</p>
+                )}
+                
+                {user.productsGrown && (
+                  <div className="mt-2">
+                    <span className="text-sm font-medium">Grows: </span>
+                    <span className="text-muted-foreground">{user.productsGrown}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Active Listings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Active Listings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {listingsLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-48 bg-gray-200 rounded-lg mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            ) : listingsData?.listings && listingsData.listings.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {listingsData.listings.map((listing) => (
+                  <div key={listing.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    {listing.imageUrl && (
+                      <img 
+                        src={listing.imageUrl} 
+                        alt={listing.title}
+                        className="w-full h-32 object-cover rounded-md mb-3"
+                      />
+                    )}
+                    <h3 className="font-semibold mb-1">{listing.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{listing.description}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-primary">${listing.pricePerUnit}/{listing.unit}</span>
+                      <Badge variant="secondary">{listing.category}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No active listings found.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Reviews */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5" />
+              Reviews & Ratings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {reviewsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  </div>
+                ))}
+              </div>
+            ) : reviewsData?.reviews && reviewsData.reviews.length > 0 ? (
+              <div className="space-y-4">
+                {reviewsData.reviews.map((review) => (
+                  <div key={review.id} className="border-b pb-4 last:border-b-0">
+                    <div className="flex items-center gap-2 mb-2">
                       <div className="flex">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
                             className={`h-4 w-4 ${
-                              star <= Math.round(averageRating)
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-slate-300'
+                              star <= review.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300"
                             }`}
                           />
                         ))}
                       </div>
-                      <span className="ml-2 text-sm text-slate-500">
-                        {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(review.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                  )}
-                </div>
+                    <p className="text-muted-foreground">{review.comment}</p>
+                  </div>
+                ))}
               </div>
-              
-              {isCurrentUserProfile && (
-                <div className="mt-4 sm:mt-0">
-                  <Button onClick={() => navigate('/profile/edit')}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {user.about && (
-              <div className="mt-6">
-                <h2 className="text-lg font-semibold text-slate-900 mb-2">About</h2>
-                <p className="text-slate-600">{user.about}</p>
-              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No reviews yet.</p>
             )}
-            
-            {user.productsGrown && (
-              <div className="mt-4">
-                <h2 className="text-lg font-semibold text-slate-900 mb-2">Products Grown</h2>
-                <div className="flex flex-wrap gap-2">
-                  {user.productsGrown.split(',').map((product, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800"
-                    >
-                      {product.trim()}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <Tabs defaultValue="listings">
-            <TabsList className="mb-6">
-              <TabsTrigger value="listings">Listings</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="listings">
-              {isLoadingListings ? (
-                <div className="text-center py-12">
-                  <Loader className="h-8 w-8 animate-spin text-primary-400 mx-auto mb-2" />
-                  <p className="text-slate-600">Loading listings...</p>
-                </div>
-              ) : listings.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {listings.map((listing) => (
-                    <ListingCard key={listing.id} listing={listing} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-slate-50 rounded-lg">
-                  <p className="text-slate-600 mb-4">No listings found for this user.</p>
-                  {isCurrentUserProfile && (
-                    <Button onClick={() => navigate('/listings/new')}>
-                      Create Your First Listing
-                    </Button>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="reviews">
-              {isLoadingReviews ? (
-                <div className="text-center py-12">
-                  <Loader className="h-8 w-8 animate-spin text-primary-400 mx-auto mb-2" />
-                  <p className="text-slate-600">Loading reviews...</p>
-                </div>
-              ) : reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map((review) => (
-                    <Card key={review.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center">
-                              <div className="flex">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className={`h-4 w-4 ${
-                                      star <= review.rating
-                                        ? 'text-yellow-400 fill-current'
-                                        : 'text-slate-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="ml-2 text-sm text-slate-500">
-                                {new Date(review.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            
-                            {review.comment && (
-                              <p className="mt-2 text-slate-600">{review.comment}</p>
-                            )}
-                            
-                            {review.imageUrl && (
-                              <div className="mt-3">
-                                <img
-                                  src={review.imageUrl}
-                                  alt="Review"
-                                  className="h-24 w-auto object-cover rounded-md"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-slate-50 rounded-lg">
-                  <p className="text-slate-600">No reviews yet.</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   );
 }

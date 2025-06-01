@@ -357,25 +357,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(farmSpaces).where(eq(farmSpaces.id, id));
     return true; // Assuming deletion was successful
   }
-  
-  // Message methods
-  async createMessage(messageData: InsertMessage): Promise<Message> {
-    const [newMessage] = await db.insert(messages).values(messageData).returning();
-    return newMessage;
-  }
-  
-  async getMessagesByUser(userId: number): Promise<Message[]> {
-    return db.select()
-      .from(messages)
-      .where(or(eq(messages.senderId, userId), eq(messages.recipientId, userId)))
-      .orderBy(desc(messages.createdAt));
-  }
-  
-  async markMessageAsRead(messageId: number): Promise<void> {
-    await db.update(messages)
-      .set({ isRead: true })
-      .where(eq(messages.id, messageId));
-  }
 }
 
 export const storage = new DatabaseStorage();
