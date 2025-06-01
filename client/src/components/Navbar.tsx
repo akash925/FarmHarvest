@@ -11,41 +11,73 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Search, Menu, X } from 'lucide-react';
-import AuthTestComponent from './AuthTestComponent';
+
 
 export default function Navbar() {
   const [location, navigate] = useLocation();
-  const { user, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasSellerProfile, setHasSellerProfile] = useState(false);
   
-  // Debug logging to see authentication state changes
-  console.log("Navbar render - isAuthenticated:", isAuthenticated, "user:", user?.name);
-  
-  // Check if user has a seller profile to determine access to Sell functionality
+  // Direct authentication check without relying on broken context
   useEffect(() => {
-    if (user) {
-      fetch(`/api/seller-profiles/${user.id}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => setHasSellerProfile(!!data?.profile))
-        .catch(() => setHasSellerProfile(false));
-    } else {
-      setHasSellerProfile(false);
-    }
-  }, [user]);
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/session', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data.user);
+          
+          // Check seller profile
+          if (data.user) {
+            try {
+              const profileRes = await fetch(`/api/seller-profiles/${data.user.id}`);
+              if (profileRes.ok) {
+                const profileData = await profileRes.json();
+                setHasSellerProfile(!!profileData?.profile);
+              }
+            } catch (e) {
+              setHasSellerProfile(false);
+            }
+          }
+        } else {
+          setCurrentUser(null);
+          setHasSellerProfile(false);
+        }
+      } catch (error) {
+        setCurrentUser(null);
+        setHasSellerProfile(false);
+      }
+    };
+    
+    checkAuth();
+    // Re-check every 30 seconds
+    const interval = setInterval(checkAuth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  const isAuthenticated = !!currentUser;
   
 
   
 
   
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await fetch('/api/auth/logout', { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
+      setCurrentUser(null);
+      setHasSellerProfile(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
   };
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
-      <AuthTestComponent />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
@@ -75,8 +107,8 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.image || ''} alt={user?.name || 'User'} />
-                      <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+                      <AvatarImage src={currentUser?.image || ''} alt={currentUser?.name || 'User'} />
+                      <AvatarFallback>{currentUser?.name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
@@ -85,7 +117,7 @@ export default function Navbar() {
                     <Link href={`/users/${user?.id}`}>Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={`/seller-profile/${user?.id}`}>Farmer Profile</Link>
+                    <Link href={`/seller-profile/${currentUser?.id}`}>Farmer Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/seller-profile-setup">Setup Farm Profile</Link>
