@@ -65,7 +65,13 @@ export interface IStorage {
   updateFarmSpace(id: number, farmSpace: Partial<InsertFarmSpace>): Promise<FarmSpace>;
   deleteFarmSpace(id: number): Promise<boolean>;
   
-
+  // Message methods
+  getMessage(id: number): Promise<Message | undefined>;
+  getMessagesByUser(userId: number): Promise<Message[]>;
+  getConversation(senderId: number, recipientId: number, farmSpaceId?: number): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageAsRead(id: number): Promise<Message>;
+  getUnreadMessageCount(userId: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -356,6 +362,64 @@ export class DatabaseStorage implements IStorage {
   async deleteFarmSpace(id: number): Promise<boolean> {
     await db.delete(farmSpaces).where(eq(farmSpaces.id, id));
     return true; // Assuming deletion was successful
+  }
+
+  // Message methods
+  async getMessage(id: number): Promise<Message | undefined> {
+    const [message] = await db.select().from(messages).where(eq(messages.id, id));
+    return message || undefined;
+  }
+
+  async getMessagesByUser(userId: number): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(or(eq(messages.senderId, userId), eq(messages.recipientId, userId)))
+      .orderBy(desc(messages.createdAt));
+  }
+
+  async getConversation(senderId: number, recipientId: number, farmSpaceId?: number): Promise<Message[]> {
+    let whereCondition = and(
+      or(
+        and(eq(messages.senderId, senderId), eq(messages.recipientId, recipientId)),
+        and(eq(messages.senderId, recipientId), eq(messages.recipientId, senderId))
+      )
+    );
+
+    if (farmSpaceId) {
+      whereCondition = and(whereCondition, eq(messages.farmSpaceId, farmSpaceId));
+    }
+
+    return await db
+      .select()
+      .from(messages)
+      .where(whereCondition)
+      .orderBy(messages.createdAt);
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [newMessage] = await db
+      .insert(messages)
+      .values(message)
+      .returning();
+    return newMessage;
+  }
+
+  async markMessageAsRead(id: number): Promise<Message> {
+    const [updatedMessage] = await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(eq(messages.id, id))
+      .returning();
+    return updatedMessage;
+  }
+
+  async getUnreadMessageCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(messages)
+      .where(and(eq(messages.recipientId, userId), eq(messages.isRead, false)));
+    return result[0]?.count || 0;
   }
 }
 

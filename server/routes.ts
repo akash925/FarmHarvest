@@ -3,11 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import Stripe from "stripe";
 import { z } from "zod";
+import { WebSocketServer } from "ws";
 import {
   insertListingSchema,
   insertOrderSchema,
   insertReviewSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertMessageSchema
 } from "@shared/schema";
 
 // Get Stripe secret key from environment
