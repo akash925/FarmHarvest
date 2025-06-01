@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { MapPin, Square, Droplets, Sun, Wrench, Home, Calendar } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
@@ -215,89 +215,87 @@ export default function FarmSpaces() {
         </Card>
 
         {/* Farm Spaces Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {farmSpaces.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No farm spaces found
+              </h3>
+              <p className="text-slate-600">
+                Try adjusting your filters or expanding your search area.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {farmSpaces.map((space: FarmSpace) => (
+              <Link key={space.id} href={`/farm-spaces/${space.id}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{space.title}</CardTitle>
+                      <Badge variant="secondary" className="bg-primary-100 text-primary-800">
+                        {formatPrice(space.pricePerMonth)}
+                      </Badge>
+                    </div>
+                    <CardDescription className="flex items-center text-slate-600">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {space.location}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-slate-700 mb-4 line-clamp-2">
+                      {space.description}
+                    </p>
 
-            {farmSpaces.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    No farm spaces found
-                  </h3>
-                  <p className="text-slate-600">
-                    Try adjusting your filters or expanding your search area.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {farmSpaces.map((space: FarmSpace) => (
-                  <Card key={space.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{space.title}</CardTitle>
-                        <Badge variant="secondary" className="bg-primary-100 text-primary-800">
-                          {formatPrice(space.pricePerMonth)}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="flex items-center text-sm text-slate-600">
+                        <Square className="h-4 w-4 mr-2" />
+                        {space.sizeSqft} sq ft
+                      </div>
+                      <div className="flex items-center text-sm text-slate-600">
+                        <Sun className="h-4 w-4 mr-2" />
+                        {formatLightConditions(space.lightConditions)}
+                      </div>
+                      <div className="flex items-center text-sm text-slate-600">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Available {formatDate(space.availableFrom)}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {formatSoilType(space.soilType)} soil
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {space.waterAccess && (
+                        <Badge variant="outline" className="text-xs">
+                          <Droplets className="h-3 w-3 mr-1" />
+                          Water Access
                         </Badge>
-                      </div>
-                      <CardDescription className="flex items-center text-slate-600">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {space.location}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-slate-700 mb-4 line-clamp-2">
-                        {space.description}
-                      </p>
+                      )}
+                      {space.greenhouseAccess && (
+                        <Badge variant="outline" className="text-xs">
+                          <Home className="h-3 w-3 mr-1" />
+                          Greenhouse
+                        </Badge>
+                      )}
+                      {space.toolStorage && (
+                        <Badge variant="outline" className="text-xs">
+                          <Wrench className="h-3 w-3 mr-1" />
+                          Tool Storage
+                        </Badge>
+                      )}
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="flex items-center text-sm text-slate-600">
-                          <Square className="h-4 w-4 mr-2" />
-                          {space.sizeSqft} sq ft
-                        </div>
-                        <div className="flex items-center text-sm text-slate-600">
-                          <Sun className="h-4 w-4 mr-2" />
-                          {formatLightConditions(space.lightConditions)}
-                        </div>
-                        <div className="flex items-center text-sm text-slate-600">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Available {formatDate(space.availableFrom)}
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          {formatSoilType(space.soilType)} soil
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {space.waterAccess && (
-                          <Badge variant="outline" className="text-xs">
-                            <Droplets className="h-3 w-3 mr-1" />
-                            Water Access
-                          </Badge>
-                        )}
-                        {space.greenhouseAccess && (
-                          <Badge variant="outline" className="text-xs">
-                            <Home className="h-3 w-3 mr-1" />
-                            Greenhouse
-                          </Badge>
-                        )}
-                        {space.toolStorage && (
-                          <Badge variant="outline" className="text-xs">
-                            <Wrench className="h-3 w-3 mr-1" />
-                            Tool Storage
-                          </Badge>
-                        )}
-                      </div>
-
-                      <Button className="w-full">
-                        Contact Owner
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    <Button className="w-full">
+                      Contact Owner
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </>
   );
