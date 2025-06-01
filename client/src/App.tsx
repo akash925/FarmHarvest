@@ -24,7 +24,7 @@ import SendMessage from "@/pages/SendMessage";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/lib/auth-simple";
 
 function App() {
   // Temporarily disable auth loading to get app working
