@@ -62,10 +62,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         return true;
       } else {
         console.log("Session check failed:", res.status);
+        setUser(null);
         return false;
       }
     } catch (error) {
       console.error("Failed to check authentication:", error);
+      setUser(null);
       return false;
     } finally {
       // Always set to false to prevent infinite loading
@@ -112,8 +114,10 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         console.log("Login successful:", data.user);
         setUser(data.user);
         
-        // Force a refresh to ensure the UI updates
-        window.location.href = "/";
+        // Force a page reload to ensure all components recognize the new auth state
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
         return;
       }
 
