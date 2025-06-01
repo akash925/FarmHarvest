@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,22 @@ export default function Navbar() {
   const [location, navigate] = useLocation();
   const { user, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasSellerProfile, setHasSellerProfile] = useState(false);
   
   // Debug logging to see authentication state changes
   console.log("Navbar render - isAuthenticated:", isAuthenticated, "user:", user?.name);
+  
+  // Check if user has a seller profile to determine access to Sell functionality
+  useEffect(() => {
+    if (user) {
+      fetch(`/api/seller-profiles/${user.id}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => setHasSellerProfile(!!data?.profile))
+        .catch(() => setHasSellerProfile(false));
+    } else {
+      setHasSellerProfile(false);
+    }
+  }, [user]);
   
 
   

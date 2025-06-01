@@ -41,6 +41,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps): React.ReactElement {
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [, forceUpdate] = useState({});
   
   console.log("AuthProvider render - user exists:", !!user, "isInitializing:", isInitializing);
 
@@ -175,7 +176,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     isAuthenticated: !!user,
     signIn,
     signOut
-  }), [user, isInitializing, signIn, signOut]);
+  }), [user, isInitializing]);
   
   // Force re-render when user state changes
   console.log("AuthProvider render - user exists:", !!user, "isInitializing:", isInitializing);
