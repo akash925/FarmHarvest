@@ -114,7 +114,7 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/users/${user?.id}`}>Profile</Link>
+                    <Link href={`/users/${currentUser?.id}`}>Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/seller-profile/${currentUser?.id}`}>Farmer Profile</Link>
@@ -193,14 +193,14 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <Link 
-                  href={`/users/${user?.id}`} 
+                  href={`/users/${currentUser?.id}`} 
                   className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profile
                 </Link>
                 <Link 
-                  href={`/seller-profile/${user?.id}`}
+                  href={`/seller-profile/${currentUser?.id}`}
                   className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   onClick={() => setMobileMenuOpen(false)}
                 >
