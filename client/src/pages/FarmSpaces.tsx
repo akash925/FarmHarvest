@@ -13,16 +13,16 @@ interface FarmSpace {
   id: number;
   title: string;
   description: string;
-  size_sqft: number;
-  price_per_month: number;
-  soil_type: string;
-  light_conditions: string;
-  water_access: boolean;
-  greenhouse_access: boolean;
-  tool_storage: boolean;
+  sizeSqft: number;
+  pricePerMonth: number;
+  soilType: string;
+  lightConditions: string;
+  waterAccess: boolean;
+  greenhouseAccess: boolean;
+  toolStorage: boolean;
   location: string;
-  available_from: string;
-  available_until?: string;
+  availableFrom: string;
+  availableUntil?: string;
 }
 
 export default function FarmSpaces() {
@@ -135,7 +135,7 @@ export default function FarmSpaces() {
                       <SelectValue placeholder="Any soil type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Any soil type</SelectItem>
+                      <SelectItem value="any">Any soil type</SelectItem>
                       <SelectItem value="loamy">Loamy</SelectItem>
                       <SelectItem value="sandy_loam">Sandy Loam</SelectItem>
                       <SelectItem value="clay">Clay</SelectItem>

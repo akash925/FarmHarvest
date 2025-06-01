@@ -332,7 +332,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllAvailableFarmSpaces(): Promise<FarmSpace[]> {
-    return db.select().from(farmSpaces).where(eq(farmSpaces.status, "available"));
+    return db.select().from(farmSpaces);
   }
   
   async createFarmSpace(farmSpace: InsertFarmSpace): Promise<FarmSpace> {

@@ -1033,12 +1033,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (min_size) {
         filteredSpaces = filteredSpaces.filter(space => 
-          space.squareFootage && space.squareFootage >= parseInt(min_size as string)
+          space.sizeSqft && space.sizeSqft >= parseInt(min_size as string)
         );
       }
       
       if (max_price) {
-        filteredSpaces = filteredSpaces.filter(space => space.price <= parseInt(max_price as string) * 100);
+        filteredSpaces = filteredSpaces.filter(space => 
+          space.pricePerMonth && space.pricePerMonth <= parseInt(max_price as string) * 100
+        );
+      }
+      
+      if (water_access === 'true') {
+        filteredSpaces = filteredSpaces.filter(space => space.waterAccess === true);
+      }
+      
+      if (greenhouse_access === 'true') {
+        filteredSpaces = filteredSpaces.filter(space => space.greenhouseAccess === true);
+      }
+      
+      if (tool_storage === 'true') {
+        filteredSpaces = filteredSpaces.filter(space => space.toolStorage === true);
       }
 
       res.json({ farmSpaces: filteredSpaces });

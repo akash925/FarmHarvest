@@ -108,15 +108,18 @@ export const profileMedia = pgTable("profile_media", {
 export const farmSpaces = pgTable("farm_spaces", {
   id: serial("id").primaryKey(),
   sellerProfileId: integer("seller_profile_id").notNull().references(() => sellerProfiles.id),
-  squareFootage: integer("square_footage"),
-  soilType: text("soil_type"), // loam, clay, sandy, mixed, custom
-  lightConditions: text("light_conditions"), // full_sun, partial_shade, mostly_shaded, custom
-  irrigationOptions: text("irrigation_options"), // manual, automated, natural
-  managementLevel: text("management_level"), // hands_off, daily_visit, multiple_visits
-  additionalNotes: text("additional_notes"),
-  price: integer("price").notNull(), // in cents
-  pricingType: text("pricing_type").notNull(), // monthly, seasonal, flat
-  status: text("status").default("available"), // available, booked, unavailable
+  title: text("title"),
+  description: text("description"),
+  sizeSqft: integer("size_sqft"),
+  pricePerMonth: integer("price_per_month"),
+  soilType: text("soil_type"),
+  lightConditions: text("light_conditions"),
+  waterAccess: boolean("water_access"),
+  greenhouseAccess: boolean("greenhouse_access"),
+  toolStorage: boolean("tool_storage"),
+  location: text("location"),
+  availableFrom: timestamp("available_from"),
+  availableUntil: timestamp("available_until"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
