@@ -169,13 +169,13 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     }
   };
   
-  const contextValue = {
+  const contextValue = React.useMemo(() => ({
     user,
     isInitializing,
     isAuthenticated: !!user,
     signIn,
     signOut
-  };
+  }), [user, isInitializing, signIn, signOut]);
   
   // Force re-render when user state changes
   console.log("AuthProvider render - user exists:", !!user, "isInitializing:", isInitializing);

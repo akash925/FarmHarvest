@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -69,15 +69,16 @@ type CreateListingFormValues = z.infer<typeof createListingSchema>;
 
 export default function CreateListing() {
   const [, navigate] = useLocation();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isInitializing, user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Redirect if not authenticated
-  if (!isAuthenticated) {
-    navigate('/auth');
-    return null;
-  }
+  useEffect(() => {
+    if (!isInitializing && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, isInitializing, navigate]);
   
   const form = useForm<CreateListingFormValues>({
     resolver: zodResolver(createListingSchema),
