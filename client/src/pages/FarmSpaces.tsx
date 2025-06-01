@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Square, Droplets, Sun, Wrench, Home, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MapPin, Square, Droplets, Sun, Wrench, Home, Calendar, Map } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import InteractiveMap from '@/components/InteractiveMap';
 
 interface FarmSpace {
   id: number;
