@@ -47,6 +47,7 @@ function App() {
             <Route path="/auth" component={Auth} />
             <Route path="/sell" component={Sell} />
             <Route path="/listings" component={Listings} />
+            <Route path="/messages" component={Messages} />
             <Route path="/marketplace-map" component={MarketplaceMap} />
             <Route path="/seller-profile/:id" component={EnhancedSellerProfile} />
             <Route path="/seller-profile-setup" component={SellerProfileSetup} />
