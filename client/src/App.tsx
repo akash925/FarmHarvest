@@ -13,8 +13,7 @@ import MyOrders from "@/pages/MyOrders";
 import Auth from "@/pages/FixedAuth";
 import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
-import SellerOnboarding from "@/pages/SellerOnboarding";
-import QuickLogin from "@/pages/QuickLogin";
+import Sell from "@/pages/Sell";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
 import SendMessage from "@/pages/SendMessage";
@@ -43,10 +42,9 @@ function App() {
             <Route path="/checkout/:listingId" component={Checkout} />
             <Route path="/orders" component={MyOrders} />
             <Route path="/auth" component={Auth} />
+            <Route path="/sell" component={Sell} />
             <Route path="/seller-profile/:id" component={EnhancedSellerProfile} />
             <Route path="/seller-profile-setup" component={SellerProfileSetup} />
-            <Route path="/seller-onboarding" component={SellerOnboarding} />
-            <Route path="/quick-login" component={QuickLogin} />
             <Route path="/farm-spaces" component={FarmSpaces} />
             <Route path="/farm-spaces/:id" component={FarmSpaceDetail} />
             <Route path="/farm-spaces/:id/message" component={SendMessage} />

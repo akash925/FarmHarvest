@@ -148,7 +148,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/auth/session", async (req, res) => {
     try {
-      if (!req.session.userId) {
+      console.log("Session check - Session ID:", req.sessionID, "User ID:", req.session?.userId);
+      
+      if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
       
@@ -159,6 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
       
+      console.log("Session check successful for user:", user.name);
       return res.status(200).json({ user });
     } catch (error) {
       console.error("Session error:", error);
@@ -230,23 +233,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // Set session and ensure it's saved synchronously
-      req.session.userId = user.id;
-      
-      // Force session save and wait for it
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) {
-            console.error("Session save error:", err);
-            reject(err);
-          } else {
-            console.log("Session saved successfully for user:", user.id);
-            resolve();
+      // Regenerate session ID to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Session error" });
+        }
+        
+        // Set user ID in the new session
+        req.session.userId = user.id;
+        
+        // Save the session with proper error handling
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
           }
+          
+          console.log("Session saved successfully for user:", user.id, "Session ID:", req.sessionID);
+          return res.json({ user });
         });
       });
-      
-      return res.json({ user });
     } catch (error: any) {
       console.error("Signin error:", error);
       res.status(500).json({ message: "Failed to sign in", error: error.message });

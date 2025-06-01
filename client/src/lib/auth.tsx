@@ -89,7 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         const data = await response.json();
         if (data.user) {
           setUser(data.user);
-          window.location.reload(); // Force complete page reload
+          // Don't reload, just update state
           return;
         }
       }
