@@ -57,11 +57,13 @@ export default function FarmSpaces() {
     return `$${(priceInCents / 100).toFixed(0)}/month`;
   };
 
-  const formatSoilType = (soilType: string) => {
+  const formatSoilType = (soilType: string | null) => {
+    if (!soilType) return 'Unknown';
     return soilType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const formatLightConditions = (light: string) => {
+  const formatLightConditions = (light: string | null) => {
+    if (!light) return 'Unknown';
     return light.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
@@ -158,7 +160,7 @@ export default function FarmSpaces() {
                       <SelectValue placeholder="Any light level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Any light level</SelectItem>
+                      <SelectItem value="any">Any light level</SelectItem>
                       <SelectItem value="full_sun">Full Sun</SelectItem>
                       <SelectItem value="partial_sun">Partial Sun</SelectItem>
                       <SelectItem value="partial_shade">Partial Shade</SelectItem>
@@ -291,7 +293,7 @@ export default function FarmSpaces() {
                       <div className="flex justify-between items-start">
                         <CardTitle className="text-lg">{space.title}</CardTitle>
                         <Badge variant="secondary" className="bg-primary-100 text-primary-800">
-                          {formatPrice(space.price_per_month)}
+                          {formatPrice(space.pricePerMonth)}
                         </Badge>
                       </div>
                       <CardDescription className="flex items-center text-slate-600">
@@ -307,35 +309,35 @@ export default function FarmSpaces() {
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="flex items-center text-sm text-slate-600">
                           <Square className="h-4 w-4 mr-2" />
-                          {space.size_sqft} sq ft
+                          {space.sizeSqft} sq ft
                         </div>
                         <div className="flex items-center text-sm text-slate-600">
                           <Sun className="h-4 w-4 mr-2" />
-                          {formatLightConditions(space.light_conditions)}
+                          {formatLightConditions(space.lightConditions)}
                         </div>
                         <div className="flex items-center text-sm text-slate-600">
                           <Calendar className="h-4 w-4 mr-2" />
-                          Available {formatDate(space.available_from)}
+                          Available {formatDate(space.availableFrom)}
                         </div>
                         <div className="text-sm text-slate-600">
-                          {formatSoilType(space.soil_type)} soil
+                          {formatSoilType(space.soilType)} soil
                         </div>
                       </div>
 
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {space.water_access && (
+                        {space.waterAccess && (
                           <Badge variant="outline" className="text-xs">
                             <Droplets className="h-3 w-3 mr-1" />
                             Water Access
                           </Badge>
                         )}
-                        {space.greenhouse_access && (
+                        {space.greenhouseAccess && (
                           <Badge variant="outline" className="text-xs">
                             <Home className="h-3 w-3 mr-1" />
                             Greenhouse
                           </Badge>
                         )}
-                        {space.tool_storage && (
+                        {space.toolStorage && (
                           <Badge variant="outline" className="text-xs">
                             <Wrench className="h-3 w-3 mr-1" />
                             Tool Storage
