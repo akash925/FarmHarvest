@@ -32,20 +32,29 @@ app.use(express.urlencoded({ extended: false }));
 app.use(session({
   store: new PgSession({
     pool,
-    tableName: 'user_sessions', // Use this specific table for sessions
-    createTableIfMissing: true, // Create the table if it doesn't exist
+    tableName: 'user_sessions',
+    createTableIfMissing: true,
   }),
   secret: process.env.SESSION_SECRET || 'farm-produce-marketplace-secret',
   resave: false,
   saveUninitialized: false,
-  rolling: true, // Extend session on activity
+  rolling: true,
+  name: 'sessionId', // Explicit session name
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Always false for development
     httpOnly: true,
-    sameSite: 'lax' // Help with session persistence
+    sameSite: 'lax'
   }
 }));
+
+// Debug middleware for session tracking
+app.use((req, res, next) => {
+  if (req.path.includes('/api/auth/')) {
+    console.log(`[${req.method}] ${req.path} - Session ID: ${req.sessionID}, User ID: ${req.session.userId}`);
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
