@@ -22,15 +22,9 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/use-auth";
 
 function App() {
-  const { isInitializing } = useAuth();
-
-  if (isInitializing) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary-400 border-t-transparent rounded-full" aria-label="Loading" />
-      </div>
-    );
-  }
+  // Temporarily disable auth loading to get app working
+  // const { isInitializing } = useAuth();
+  const isInitializing = false;
 
   return (
     <TooltipProvider>
