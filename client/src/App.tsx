@@ -14,6 +14,7 @@ import Auth from "@/pages/FixedAuth";
 import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
 import Sell from "@/pages/Sell";
+import Listings from "@/pages/Listings";
 import MarketplaceMap from "@/pages/MarketplaceMap";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
@@ -44,6 +45,7 @@ function App() {
             <Route path="/orders" component={MyOrders} />
             <Route path="/auth" component={Auth} />
             <Route path="/sell" component={Sell} />
+            <Route path="/listings" component={Listings} />
             <Route path="/marketplace-map" component={MarketplaceMap} />
             <Route path="/seller-profile/:id" component={EnhancedSellerProfile} />
             <Route path="/seller-profile-setup" component={SellerProfileSetup} />
