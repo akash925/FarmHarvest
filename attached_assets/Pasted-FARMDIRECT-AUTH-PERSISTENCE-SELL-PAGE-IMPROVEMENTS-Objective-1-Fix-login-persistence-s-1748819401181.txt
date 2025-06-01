@@ -1,0 +1,484 @@
+FARMDIRECT: AUTH PERSISTENCE + “SELL” PAGE IMPROVEMENTS
+
+**Objective:**  
+1. Fix login persistence so that only one `AuthProvider` (in `client/src/lib/auth.tsx`) controls all authentication state.  
+2. Ensure all protected pages (including the “Sell” page) properly redirect unauthenticated users and guide non-farm users to create a farm profile.
+
+Below is a single, cut-and-paste prompt. Give this to the Replit AI agent to make the required updates across the entire codebase.
+
+---
+
+1) **DELETE THE OLD AUTH-SIMPLE PROVIDER**  
+client/src/lib/auth-simple.tsx
+
+arduino
+Copy
+Edit
+• Remove or rename this file so no component can accidentally import it anymore.
+
+---
+
+2) **UPDATE THE ROOT RENDER TO USE THE REAL AUTH PROVIDER**  
+**File:** `client/src/main.tsx` (or `index.tsx`)  
+Replace any import of `auth-simple` with the real `auth.tsx` provider. The entire file should become:
+
+```tsx
+// client/src/main.tsx
+import React from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+import "./index.css";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { AuthProvider } from "@/lib/auth";            // ← REAL PROVIDER
+import { HelmetProvider } from "react-helmet-async";
+
+createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <ThemeProvider>
+          <AuthProvider>                              {/* Wrap entire App */}
+            <App />
+          </AuthProvider>
+        </ThemeProvider>
+      </HelmetProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+ENSURE apiRequest ATTACHES THE BEARER TOKEN
+File: client/src/lib/queryClient.ts
+Replace its contents with:
+
+ts
+Copy
+Edit
+// client/src/lib/queryClient.ts
+import { QueryClient, QueryFunction } from "@tanstack/react-query";
+
+async function throwIfResNotOk(res: Response) {
+  if (!res.ok) {
+    const text = (await res.text()) || res.statusText;
+    throw new Error(`${res.status}: ${text}`);
+  }
+}
+
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown,
+  token?: string
+): Promise<Response> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
+  });
+  await throwIfResNotOk(res);
+  return res;
+}
+
+function getQueryFn(): QueryFunction {
+  return async ({ queryKey }) => {
+    const [method, url, data] = queryKey as [string, string, any];
+    const token = localStorage.getItem("fh_token") || undefined;
+    const res = await apiRequest(method, url, data, token);
+    return res.json();
+  };
+}
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: getQueryFn(),
+      refetchOnWindowFocus: false,
+      staleTime: Infinity,
+      retry: false,
+    },
+    mutations: { retry: false },
+  },
+});
+REPLACE auth.tsx WITH FULL SESSION-BASED CONTEXT
+File: client/src/lib/auth.tsx
+Overwrite its contents exactly with:
+
+tsx
+Copy
+Edit
+// client/src/lib/auth.tsx
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { apiRequest } from "./queryClient";
+
+export interface User {
+  id: number;
+  name: string | null;
+  email: string;
+  image?: string | null;
+  zip?: string | null;
+  about?: string | null;
+  authType: string;
+  authId: string;
+}
+
+interface AuthContextValue {
+  user: User | null;
+  token: string | null;
+  isInitializing: boolean;
+  isAuthenticated: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
+  return ctx;
+}
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem("fh_token");
+    if (savedToken) {
+      setToken(savedToken);
+      (async () => {
+        try {
+          const res = await apiRequest(
+            "GET",
+            "/api/auth/session",
+            undefined,
+            savedToken
+          );
+          if (res.ok) {
+            const { user: existingUser } = await res.json();
+            if (existingUser) setUser(existingUser);
+            else {
+              localStorage.removeItem("fh_token");
+              setToken(null);
+              setUser(null);
+            }
+          } else {
+            localStorage.removeItem("fh_token");
+            setToken(null);
+            setUser(null);
+          }
+        } catch {
+          localStorage.removeItem("fh_token");
+          setToken(null);
+          setUser(null);
+        } finally {
+          setIsInitializing(false);
+        }
+      })();
+    } else {
+      setIsInitializing(false);
+    }
+  }, []);
+
+  async function signIn(email: string, password: string) {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`Login failed: ${text}`);
+    }
+    const { token: newToken, user: loggedInUser } = await res.json();
+    localStorage.setItem("fh_token", newToken);
+    setToken(newToken);
+    setUser(loggedInUser);
+  }
+
+  function signOut() {
+    localStorage.removeItem("fh_token");
+    setToken(null);
+    setUser(null);
+  }
+
+  const value: AuthContextValue = {
+    user,
+    token,
+    isInitializing,
+    isAuthenticated: !!user,
+    signIn,
+    signOut,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+FIX ALL useAuth() IMPORTS
+• Search entire client/src folder for any import { useAuth } references.
+• Replace lines like:
+
+diff
+Copy
+Edit
+- import { useAuth } from "@/lib/auth-simple";
++ import { useAuth } from "@/lib/auth";
+to ensure every component is using the new session-based AuthContext.
+
+REFRACTOR PROTECTED PAGES TO USE useEffect FOR REDIRECTS
+Any page that does:
+
+tsx
+Copy
+Edit
+if (!auth.isAuthenticated) {
+  setLocation("/login");
+  return null;
+}
+must be updated to:
+
+diff
+Copy
+Edit
+import React, { useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
+
+export default function SomeProtectedPage() {
+  const auth = useAuth();
+  const [_, setLocation] = useLocation();
+
+  // 1) Show spinner while verifying the session
+  if (auth.isInitializing) return <div>Loading…</div>;
+
+  // 2) Redirect if not authenticated (after initial render)
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [auth.isAuthenticated, setLocation]);
+
+  // 3) If not authenticated, render null while redirecting
+  if (!auth.isAuthenticated) return null;
+
+  // 4) Authenticated → show protected content
+  return <div>{/* …protected UI… */}</div>;
+}
+Apply this pattern to every protected route, including but not limited to:
+
+client/src/pages/CreateListing.tsx
+
+client/src/pages/EditProfile.tsx
+
+client/src/pages/Dashboard.tsx
+
+client/src/pages/MyFarm.tsx
+
+etc.
+
+UPDATE “SELL” PAGE TO HANDLE NON-FARM / UNAUTHENTICATED USERS
+File: client/src/pages/Sell.tsx (or wherever your Sell page lives)
+Replace its contents with the scaffold below. It will:
+
+Wait for auth.isInitializing.
+
+Redirect unauthenticated users to /login.
+
+If authenticated but user has no farm profile, show a prompt to create one.
+
+Otherwise render the existing “sell produce” form.
+
+tsx
+Copy
+Edit
+// client/src/pages/Sell.tsx
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export default function Sell() {
+  const auth = useAuth();
+  const [_, setLocation] = useLocation();
+  const [hasFarm, setHasFarm] = useState<boolean | null>(null);
+
+  // 1) Show loading spinner while checking session
+  if (auth.isInitializing) {
+    return <div>Loading…</div>;
+  }
+
+  // 2) Redirect to /login if not authenticated
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [auth.isAuthenticated, setLocation]);
+
+  if (!auth.isAuthenticated) {
+    // while redirecting, render nothing
+    return null;
+  }
+
+  // 3) Once authenticated, check if user has a farm profile
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem("fh_token") || "";
+        // Fetch farm spaces for this user
+        const res = await apiRequest(
+          "GET",
+          `/api/farm_spaces?userId=${auth.user!.id}`,
+          undefined,
+          token
+        );
+        const { farmSpaces } = await res.json();
+        setHasFarm(Array.isArray(farmSpaces) && farmSpaces.length > 0);
+      } catch (err) {
+        console.error("Error fetching farm profile:", err);
+        setHasFarm(false);
+      }
+    })();
+  }, [auth.user]);
+
+  // 4) While we don’t yet know if they have a farm, show spinner
+  if (hasFarm === null) {
+    return <div>Checking farm profile…</div>;
+  }
+
+  // 5) If user has no farm, prompt them to create one
+  if (hasFarm === false) {
+    return (
+      <Card className="max-w-lg mx-auto mt-12">
+        <CardHeader>
+          <CardTitle>Create Your Farm Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p>You need a farm profile before you can sell produce.</p>
+          <Button onClick={() => setLocation("/create-farm")}>
+            Create Farm Profile
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 6) Authenticated + has farm → render the Sell form
+  return (
+    <div className="max-w-2xl mx-auto mt-12 space-y-6">
+      <h1 className="text-2xl font-semibold">Sell Your Produce</h1>
+      {/* Replace the following with your existing “sell produce” form JSX */}
+      <Card>
+        <CardHeader>
+          <CardTitle>New Listing</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form>
+            <div>
+              <Label htmlFor="itemName">Item Name</Label>
+              <Input id="itemName" placeholder="Tomatoes, Apples, Eggs…" />
+            </div>
+            <div>
+              <Label htmlFor="price">Price per Unit</Label>
+              <Input id="price" type="number" placeholder="e.g. 2.50" />
+            </div>
+            <div>
+              <Label htmlFor="quantity">Quantity Available</Label>
+              <Input id="quantity" type="number" placeholder="e.g. 50" />
+            </div>
+            {/* … any additional fields you need … */}
+            <Button type="submit">Publish Listing</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+• Adjust the form at the bottom to match your existing Sell UI.
+• This code calls GET /api/farm_spaces?userId=<id> to see if any farm exists. If none, it shows a card prompting the user to create a farm profile.
+
+VERIFY App.tsx HIERARCHY
+File: client/src/App.tsx
+Make sure you did NOT wrap any part of App in another AuthProvider. It should look like:
+
+tsx
+Copy
+Edit
+// client/src/App.tsx
+import React from "react";
+import { Route, Switch } from "wouter";
+import Navbar from "@/components/Navbar";
+import Home from "@/pages/Home";
+import Sell from "@/pages/Sell";
+import CreateFarm from "@/pages/CreateFarmSpace";
+import SimpleAuth from "@/pages/SimpleAuth";
+// … other page imports …
+
+export default function App() {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1">
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/login" component={SimpleAuth} />
+          <Route path="/sell" component={Sell} />
+          <Route path="/create-farm" component={CreateFarm} />
+          {/* … other routes … */}
+        </Switch>
+      </main>
+    </div>
+  );
+}
+• Ensure <Navbar> and every <Route> is inside the single AuthProvider from main.tsx.
+
+RUN & VALIDATE
+
+Restart your dev server so Vite recompiles.
+
+Check the browser console—expect:
+
+pgsql
+Copy
+Edit
+AuthProvider render – user exists: false isInitializing: true
+Checking authentication session…
+Session check received user: { id: 3, name: "Akash", … }
+Auth state updated – user set: true
+Setting isInitializing to false
+AuthProvider render – user exists: true isInitializing: false
+Navbar render – user: true isAuthenticated: true
+Navigate to /sell while logged out—you should be redirected to /login (no warnings).
+
+Log in, then navigate to /sell—the page checks if you have a farm:
+
+If you do not, it shows a “Create Your Farm Profile” card.
+
+If you do, it displays the Sell form.
+
+Confirm no “Cannot update a component during render” errors appear.
+
+Result:
+
+A single AuthProvider handles all login state.
+
+All components use the same useAuth() import.
+
+Protected routes (including “Sell”) redirect in a useEffect.
+
+The Sell page now prompts non-farm users to create a farm before they can post a listing.

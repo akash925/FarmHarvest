@@ -1,15 +1,22 @@
-import { useAuth } from "@/lib/auth-simple";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+// client/src/pages/Sell.tsx
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Helmet } from "react-helmet-async";
 import { Package, Truck, DollarSign, Users } from "lucide-react";
 
 export default function Sell() {
-  const { isAuthenticated, isInitializing } = useAuth();
-  const [, navigate] = useLocation();
+  const auth = useAuth();
+  const [_, setLocation] = useLocation();
+  const [hasFarm, setHasFarm] = useState<boolean | null>(null);
 
-  if (isInitializing) {
+  // 1) Show loading spinner while checking session
+  if (auth.isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -17,177 +24,203 @@ export default function Sell() {
     );
   }
 
-  if (!isAuthenticated) {
+  // 2) Redirect to /login if not authenticated
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      setLocation("/auth");
+    }
+  }, [auth.isAuthenticated, setLocation]);
+
+  if (!auth.isAuthenticated) {
+    // while redirecting, render nothing
+    return null;
+  }
+
+  // 3) Once authenticated, check if user has a farm profile
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem("fh_token") || "";
+        // Fetch farm spaces for this user
+        const res = await apiRequest(
+          "GET",
+          `/api/farm-spaces?userId=${auth.user!.id}`,
+          undefined,
+          token
+        );
+        const { farmSpaces } = await res.json();
+        setHasFarm(Array.isArray(farmSpaces) && farmSpaces.length > 0);
+      } catch (err) {
+        console.error("Error fetching farm profile:", err);
+        setHasFarm(false);
+      }
+    })();
+  }, [auth.user]);
+
+  // 4) While we don't yet know if they have a farm, show spinner
+  if (hasFarm === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <p className="ml-3">Checking farm profile…</p>
+      </div>
+    );
+  }
+
+  // 5) If user has no farm, prompt them to create one
+  if (hasFarm === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
         <Helmet>
-          <title>Start Selling - FarmDirect</title>
-          <meta name="description" content="Join our marketplace and start selling your farm produce directly to customers. Create your seller profile and list your products today." />
+          <title>Create Farm Profile - FarmDirect</title>
+          <meta name="description" content="Create your farm profile to start selling fresh produce directly to customers." />
         </Helmet>
         
         <div className="container mx-auto px-4 py-16">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-6">
-              Start Selling Your Farm Produce
-            </h1>
-            <p className="text-xl text-gray-600 mb-12">
-              Join thousands of farmers connecting directly with customers. Set your own prices, build relationships, and grow your business.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <Card className="text-center">
-                <CardHeader>
-                  <Package className="w-12 h-12 text-green-600 mx-auto mb-2" />
-                  <CardTitle className="text-lg">List Your Products</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Upload photos and descriptions of your fresh produce</p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <DollarSign className="w-12 h-12 text-green-600 mx-auto mb-2" />
-                  <CardTitle className="text-lg">Set Your Prices</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Keep more profit with direct-to-customer sales</p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <Users className="w-12 h-12 text-green-600 mx-auto mb-2" />
-                  <CardTitle className="text-lg">Build Relationships</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Connect directly with customers who value fresh, local produce</p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <Truck className="w-12 h-12 text-green-600 mx-auto mb-2" />
-                  <CardTitle className="text-lg">Flexible Delivery</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Offer pickup, delivery, or farm visits</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="max-w-md mx-auto">
-              <CardHeader>
-                <CardTitle>Ready to Get Started?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-600">
-                  Create your free account and seller profile to start listing your produce today.
-                </p>
-                <div className="space-y-3">
-                  <Button 
-                    onClick={() => navigate("/auth")} 
-                    className="w-full"
-                    size="lg"
-                  >
-                    Sign Up to Start Selling
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate("/auth")} 
-                    className="w-full"
-                  >
-                    Already have an account? Sign In
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="max-w-lg mx-auto mt-12">
+            <CardHeader>
+              <CardTitle className="text-center">Create Your Farm Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-center text-gray-600">
+                You need a farm profile before you can sell produce. This helps customers learn about your farm and builds trust.
+              </p>
+              <div className="space-y-3">
+                <Button onClick={() => setLocation("/create-farm")} className="w-full">
+                  Create Farm Profile
+                </Button>
+                <Button variant="outline" onClick={() => setLocation("/")} className="w-full">
+                  Back to Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
-  // User is authenticated - show seller dashboard or onboarding
+  // 6) Authenticated + has farm → render the Sell form
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Helmet>
         <title>Seller Dashboard - FarmDirect</title>
+        <meta name="description" content="Manage your farm listings, orders, and customer communications on FarmDirect." />
       </Helmet>
       
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Seller Dashboard</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Listing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">List your fresh produce for sale</p>
-              <Button onClick={() => navigate("/listings/new")} className="w-full">
-                Add Product
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8 text-center">Welcome Back, {auth.user?.name}!</h1>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <Package className="w-8 h-8 text-green-600 mb-2" />
+                <CardTitle>Create New Listing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">List your fresh produce for sale</p>
+                <Button onClick={() => setLocation("/listings/new")} className="w-full">
+                  Add Product
+                </Button>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>My Listings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">Manage your existing products</p>
-              <Button variant="outline" onClick={() => navigate("/listings")} className="w-full">
-                View Listings
-              </Button>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <Package className="w-8 h-8 text-blue-600 mb-2" />
+                <CardTitle>My Listings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">Manage your existing products</p>
+                <Button variant="outline" onClick={() => setLocation("/listings")} className="w-full">
+                  View Listings
+                </Button>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Seller Profile</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">Update your farm information</p>
-              <Button variant="outline" onClick={() => navigate("/profile")} className="w-full">
-                Edit Profile
-              </Button>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <Users className="w-8 h-8 text-purple-600 mb-2" />
+                <CardTitle>Seller Profile</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">Update your farm information</p>
+                <Button variant="outline" onClick={() => setLocation("/profile")} className="w-full">
+                  Edit Profile
+                </Button>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Farm Spaces</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">Rent out farm space to other growers</p>
-              <Button variant="outline" onClick={() => navigate("/farm-spaces")} className="w-full">
-                Manage Spaces
-              </Button>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <Truck className="w-8 h-8 text-orange-600 mb-2" />
+                <CardTitle>Farm Spaces</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">Rent out farm space to other growers</p>
+                <Button variant="outline" onClick={() => setLocation("/farm-spaces")} className="w-full">
+                  Manage Spaces
+                </Button>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Orders</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">View and manage customer orders</p>
-              <Button variant="outline" onClick={() => navigate("/orders")} className="w-full">
-                View Orders
-              </Button>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <DollarSign className="w-8 h-8 text-green-600 mb-2" />
+                <CardTitle>Orders</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">View and manage customer orders</p>
+                <Button variant="outline" onClick={() => setLocation("/orders")} className="w-full">
+                  View Orders
+                </Button>
+              </CardContent>
+            </Card>
 
-          <Card>
+            <Card>
+              <CardHeader>
+                <Package className="w-8 h-8 text-indigo-600 mb-2" />
+                <CardTitle>Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">Track your sales performance</p>
+                <Button variant="outline" disabled className="w-full">
+                  Coming Soon
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card className="mt-8">
             <CardHeader>
-              <CardTitle>Analytics</CardTitle>
+              <CardTitle>Quick Listing Form</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 mb-4">Track your sales performance</p>
-              <Button variant="outline" disabled className="w-full">
-                Coming Soon
-              </Button>
+              <form className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="itemName">Item Name</Label>
+                    <Input id="itemName" placeholder="Tomatoes, Apples, Eggs…" />
+                  </div>
+                  <div>
+                    <Label htmlFor="price">Price per Unit</Label>
+                    <Input id="price" type="number" placeholder="e.g. 2.50" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="quantity">Quantity Available</Label>
+                    <Input id="quantity" type="number" placeholder="e.g. 50" />
+                  </div>
+                  <div>
+                    <Label htmlFor="unit">Unit Type</Label>
+                    <Input id="unit" placeholder="lbs, pieces, bunches" />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full">Publish Listing</Button>
+              </form>
             </CardContent>
           </Card>
         </div>
