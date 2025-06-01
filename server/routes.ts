@@ -1002,6 +1002,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Farm space routes with filtering
+  app.get("/api/farm-spaces", async (req, res) => {
+    try {
+      const { 
+        location, 
+        soil_type, 
+        light_conditions, 
+        min_size, 
+        max_price, 
+        water_access, 
+        greenhouse_access, 
+        tool_storage 
+      } = req.query;
+
+      // Get all available farm spaces
+      const farmSpaces = await storage.getAllAvailableFarmSpaces();
+      
+      // Apply filtering
+      let filteredSpaces = farmSpaces;
+      
+      // Apply filtering based on actual database fields
+      if (soil_type) {
+        filteredSpaces = filteredSpaces.filter(space => space.soilType === soil_type);
+      }
+      
+      if (light_conditions) {
+        filteredSpaces = filteredSpaces.filter(space => space.lightConditions === light_conditions);
+      }
+      
+      if (min_size) {
+        filteredSpaces = filteredSpaces.filter(space => 
+          space.squareFootage && space.squareFootage >= parseInt(min_size as string)
+        );
+      }
+      
+      if (max_price) {
+        filteredSpaces = filteredSpaces.filter(space => space.price <= parseInt(max_price as string) * 100);
+      }
+
+      res.json({ farmSpaces: filteredSpaces });
+    } catch (error: any) {
+      console.error("Error fetching farm spaces:", error);
+      res.status(500).json({ message: "Failed to fetch farm spaces", error: error.message });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }

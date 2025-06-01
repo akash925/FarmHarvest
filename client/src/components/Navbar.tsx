@@ -55,6 +55,9 @@ export default function Navbar() {
             <Link href="/listings" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Browse
             </Link>
+            <Link href="/farm-spaces" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
+              Rent Space
+            </Link>
             <Link href="/listings/new" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Sell
             </Link>
@@ -131,6 +134,13 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
             >
               Browse
+            </Link>
+            <Link 
+              href="/farm-spaces" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Rent Space
             </Link>
             <Link 
               href="/listings/new" 

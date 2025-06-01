@@ -13,6 +13,7 @@ import MyOrders from "@/pages/MyOrders";
 import Auth from "@/pages/FixedAuth";
 import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
+import FarmSpaces from "@/pages/FarmSpaces";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -48,6 +49,7 @@ function App() {
             <Route path="/auth" component={Auth} />
             <Route path="/seller-profile/:id" component={EnhancedSellerProfile} />
             <Route path="/seller-profile-setup" component={SellerProfileSetup} />
+            <Route path="/farm-spaces" component={FarmSpaces} />
             <Route component={NotFound} />
           </Switch>
         </main>
