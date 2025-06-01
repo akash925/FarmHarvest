@@ -58,11 +58,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
       if (res.ok) {
         const data = await res.json();
         console.log("Session check received user:", data.user);
-        setUser(data.user);
-        // Force a small delay to ensure state updates propagate
-        setTimeout(() => {
-          console.log("Auth context - user state after update:", data.user);
-        }, 100);
+        // Force React to update by creating a new object reference
+        setUser(data.user ? { ...data.user } : null);
         return true;
       } else {
         console.log("Session check failed:", res.status);
@@ -80,26 +77,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
   };
 
   useEffect(() => {
-    // Add a timeout to ensure we don't get stuck in loading state
-    const timeoutId = setTimeout(() => {
-      setIsInitializing(false);
-      console.log("Auth check timed out, proceeding with null user");
-    }, 5000);
-    
-    // Check auth immediately and then every 2 seconds to catch session updates
-    checkAuth().then(() => clearTimeout(timeoutId));
-    
-    const interval = setInterval(() => {
-      if (!user) {
-        checkAuth();
-      }
-    }, 2000);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      clearInterval(interval);
-    };
-  }, [user]);
+    checkAuth();
+  }, []);
 
   const signIn = async (provider: "google" | "facebook" | "email", credentials?: EmailCredentials) => {
     try {
