@@ -198,6 +198,20 @@ export default function UserProfile() {
                       <p className="text-gray-600">{user.about}</p>
                     </div>
                   )}
+
+                  {/* Farm Details */}
+                  {(user as any).productsGrown && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold text-gray-900 mb-2">Farm Specialties</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {(user as any).productsGrown.split(',').map((product: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
+                            {product.trim()}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -361,10 +375,44 @@ export default function UserProfile() {
 
                     {user.about && (
                       <div>
-                        <h3 className="font-semibold mb-2">Bio</h3>
+                        <h3 className="font-semibold mb-2">Farm Description</h3>
                         <p className="text-gray-600">{user.about}</p>
                       </div>
                     )}
+
+                    {(user as any).productsGrown && (
+                      <div>
+                        <h3 className="font-semibold mb-2">Farm Specialties</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {(user as any).productsGrown.split(',').map((product: string, index: number) => (
+                            <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
+                              {product.trim()}
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Fresh, locally grown produce from {user.name}'s farm
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="font-semibold mb-2">Farm Practices</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 text-green-800">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Sustainable Farming
+                          </Badge>
+                          <Badge className="bg-blue-100 text-blue-800">
+                            Local Community Focused
+                          </Badge>
+                        </div>
+                        <p className="text-gray-600 text-sm">
+                          Committed to environmentally responsible farming practices and supporting the local community.
+                        </p>
+                      </div>
+                    </div>
 
                     <div>
                       <h3 className="font-semibold mb-2">Verification Status</h3>
