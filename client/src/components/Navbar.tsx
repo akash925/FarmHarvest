@@ -98,7 +98,10 @@ export default function Navbar() {
             <Link href="/farm-spaces" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Lease
             </Link>
-            <Link href="/listings/new" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
+            <Link href="/marketplace-map" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
+              Map
+            </Link>
+            <Link href="/sell" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Sell
             </Link>
             
