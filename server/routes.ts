@@ -199,11 +199,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authId: userData.email
       });
       
-      // Set session to log the user in
+      // Set session to log the user in and ensure it's saved
       req.session.userId = newUser.id;
-      
-      // Return user data (excluding sensitive info)
-      res.status(201).json({ user: newUser });
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        return res.status(201).json({ user: newUser });
+      });
     } catch (error: any) {
       console.error("Signup error:", error);
       res.status(500).json({ message: "Failed to create account", error: error.message });
@@ -229,11 +233,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // In a real app, we would verify the password using a secure hash comparison
       // For demo purposes, we're just checking if the user exists
       
-      // Set session
+      // Set session and ensure it's saved
       req.session.userId = user.id;
-      
-      // Return user data
-      res.json({ user });
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        return res.json({ user });
+      });
     } catch (error: any) {
       console.error("Signin error:", error);
       res.status(500).json({ message: "Failed to sign in", error: error.message });
