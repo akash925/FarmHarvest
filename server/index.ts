@@ -38,10 +38,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'farm-produce-marketplace-secret',
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Extend session on activity
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax' // Help with session persistence
   }
 }));
 
