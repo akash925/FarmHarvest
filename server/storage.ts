@@ -9,7 +9,7 @@ import {
   messages, type Message, type InsertMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray, desc, gte, like, lte, or, sql } from "drizzle-orm";
+import { eq, and, inArray, desc, gte, like, lte, or, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   // User methods

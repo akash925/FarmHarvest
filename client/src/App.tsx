@@ -15,6 +15,7 @@ import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
 import Sell from "@/pages/Sell";
 import Listings from "@/pages/Listings";
+import Messages from "@/pages/Messages";
 import MarketplaceMap from "@/pages/MarketplaceMap";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
