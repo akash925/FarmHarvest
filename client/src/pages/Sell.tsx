@@ -38,18 +38,24 @@ export default function Sell() {
 
   // 3) Once authenticated, check if user has a farm profile
   useEffect(() => {
+    if (!auth.user) return;
+    
     (async () => {
       try {
-        const token = localStorage.getItem("fh_token") || "";
-        // Fetch farm spaces for this user
-        const res = await apiRequest(
-          "GET",
-          `/api/farm-spaces?userId=${auth.user!.id}`,
-          undefined,
-          token
-        );
-        const { farmSpaces } = await res.json();
-        setHasFarm(Array.isArray(farmSpaces) && farmSpaces.length > 0);
+        // Fetch farm spaces for this user using session-based auth
+        const res = await fetch(`/api/farm-spaces`, {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (res.ok) {
+          const { farmSpaces } = await res.json();
+          setHasFarm(Array.isArray(farmSpaces) && farmSpaces.length > 0);
+        } else {
+          setHasFarm(false);
+        }
       } catch (err) {
         console.error("Error fetching farm profile:", err);
         setHasFarm(false);

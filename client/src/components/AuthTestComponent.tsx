@@ -1,4 +1,4 @@
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/lib/auth';
 
 export default function AuthTestComponent() {
   const { user, isAuthenticated, isInitializing } = useAuth();

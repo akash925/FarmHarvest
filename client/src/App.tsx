@@ -24,12 +24,8 @@ import SendMessage from "@/pages/SendMessage";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/lib/auth";
-
 function App() {
-  // Temporarily disable auth loading to get app working
-  // const { isInitializing } = useAuth();
-  const isInitializing = false;
+  // Remove auth usage from App component since it's wrapped in AuthProvider in main.tsx
 
   return (
     <TooltipProvider>

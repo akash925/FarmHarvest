@@ -30,6 +30,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+export { AuthContext };
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
@@ -46,63 +48,70 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem("fh_token");
-    if (savedToken) {
-      setToken(savedToken);
-      (async () => {
-        try {
-          const res = await apiRequest(
-            "GET",
-            "/api/auth/session",
-            undefined,
-            savedToken
-          );
-          if (res.ok) {
-            const { user: existingUser } = await res.json();
-            if (existingUser) setUser(existingUser);
-            else {
-              localStorage.removeItem("fh_token");
-              setToken(null);
-              setUser(null);
-            }
-          } else {
-            localStorage.removeItem("fh_token");
-            setToken(null);
-            setUser(null);
+    (async () => {
+      try {
+        const response = await fetch("/api/auth/session", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setUser(data.user);
+            return;
           }
-        } catch {
-          localStorage.removeItem("fh_token");
-          setToken(null);
-          setUser(null);
-        } finally {
-          setIsInitializing(false);
         }
-      })();
-    } else {
-      setIsInitializing(false);
-    }
+        setUser(null);
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        setUser(null);
+      } finally {
+        setIsInitializing(false);
+      }
+    })();
   }, []);
 
   async function signIn(email: string, password: string) {
-    const res = await fetch("/api/auth/login", {
+    const response = await fetch("/api/auth/signin", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email,
+        password: password,
+      }),
     });
-    if (!res.ok) {
-      const text = (await res.text()) || res.statusText;
-      throw new Error(`Login failed: ${text}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.user) {
+        setUser(data.user);
+        return;
+      }
     }
-    const { token: newToken, user: loggedInUser } = await res.json();
-    localStorage.setItem("fh_token", newToken);
-    setToken(newToken);
-    setUser(loggedInUser);
+    
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Login failed");
   }
 
-  function signOut() {
-    localStorage.removeItem("fh_token");
-    setToken(null);
-    setUser(null);
+  async function signOut() {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setUser(null);
+      setToken(null);
+    }
   }
 
   const value: AuthContextValue = {
