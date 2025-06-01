@@ -66,7 +66,7 @@ export default function EnhancedUserProfile() {
   }
 
   const averageRating = reviews.length > 0
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / reviews.length
     : 0;
 
   const joinDate = new Date(user.createdAt).getFullYear();
@@ -213,7 +213,7 @@ export default function EnhancedUserProfile() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {listings.map((listing) => (
+                      {listings.map((listing: any) => (
                         <Card key={listing.id} className="overflow-hidden">
                           <div className="h-48 overflow-hidden">
                             <img
@@ -266,7 +266,7 @@ export default function EnhancedUserProfile() {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {reviews.map((review) => (
+                      {reviews.map((review: any) => (
                         <div key={review.id} className="border-b pb-6 last:border-b-0">
                           <div className="flex items-start gap-4">
                             <Avatar>
