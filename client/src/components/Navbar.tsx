@@ -17,6 +17,9 @@ export default function Navbar() {
   const { user, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
+  // Debug logging to see authentication state changes
+  console.log("Navbar render - isAuthenticated:", isAuthenticated, "user:", user?.name);
+  
 
   
 
