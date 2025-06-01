@@ -63,11 +63,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
         console.log("Session check received user:", data.user);
         // Force a complete re-render by creating a new object reference
         if (data.user) {
-          setUser({ ...data.user });
+          const newUser = { ...data.user };
+          setUser(newUser);
+          console.log("Auth state updated, user set:", !!newUser);
+          // Force context consumers to re-render
+          setTimeout(() => forceUpdate({}), 0);
         } else {
           setUser(null);
+          console.log("Auth state updated, user set:", false);
         }
-        console.log("Auth state updated, user set:", !!data.user);
       } else {
         console.log("Session check failed:", res.status);
         setUser(null);
