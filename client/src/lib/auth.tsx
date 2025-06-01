@@ -42,14 +42,14 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Helper function to check auth session - can be called whenever needed
+  // Simplified auth check that always completes initialization
   const checkAuth = async () => {
+    setIsInitializing(true);
     try {
       console.log("Checking authentication session...");
       const res = await fetch("/api/auth/session", {
         credentials: "include",
         headers: {
-          // Prevent caching issues
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
@@ -58,22 +58,20 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
       if (res.ok) {
         const data = await res.json();
         console.log("Session check received user:", data.user);
-        // Force React to update by creating a new object reference
-        setUser(data.user ? { ...data.user } : null);
-        return true;
+        setUser(data.user || null);
+        console.log("Auth state updated, user set:", !!data.user);
       } else {
         console.log("Session check failed:", res.status);
         setUser(null);
-        return false;
       }
     } catch (error) {
       console.error("Failed to check authentication:", error);
       setUser(null);
-      return false;
-    } finally {
-      // Always set to false to prevent infinite loading
-      setIsInitializing(false);
     }
+    
+    // Always complete initialization
+    console.log("Setting isInitializing to false");
+    setIsInitializing(false);
   };
 
   useEffect(() => {
