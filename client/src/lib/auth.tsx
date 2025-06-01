@@ -41,6 +41,8 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps): React.ReactElement {
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  
+  console.log("AuthProvider render - user exists:", !!user, "isInitializing:", isInitializing);
 
   // Simplified auth check that always completes initialization
   const checkAuth = async () => {
@@ -58,7 +60,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
       if (res.ok) {
         const data = await res.json();
         console.log("Session check received user:", data.user);
-        setUser(data.user || null);
+        // Force a complete re-render by creating a new object reference
+        if (data.user) {
+          setUser({ ...data.user });
+        } else {
+          setUser(null);
+        }
         console.log("Auth state updated, user set:", !!data.user);
       } else {
         console.log("Session check failed:", res.status);
@@ -169,6 +176,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.ReactElemen
     signIn,
     signOut
   };
+  
+  // Force re-render when user state changes
+  console.log("AuthProvider render - user exists:", !!user, "isInitializing:", isInitializing);
   
   return (
     <AuthContext.Provider value={contextValue}>
