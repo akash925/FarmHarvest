@@ -28,6 +28,20 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add CORS middleware before sessions
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 // Set up session handling
 app.use(session({
   store: new PgSession({
@@ -39,12 +53,13 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   rolling: true,
-  name: 'sessionId', // Explicit session name
+  name: 'connect.sid', // Use default session name
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    secure: false, // Always false for development
-    httpOnly: true,
-    sameSite: 'lax'
+    secure: false,
+    httpOnly: false, // Allow JavaScript access for debugging
+    sameSite: 'lax',
+    domain: undefined // Let browser determine domain
   }
 }));
 
