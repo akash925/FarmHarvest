@@ -62,7 +62,7 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
     secure: false,
     httpOnly: false, // Allow frontend access for debugging
-    sameSite: 'none', // Required for cross-origin cookies
+    sameSite: 'lax', // Better for development environment
     path: '/',
     domain: undefined // Let browser set domain
   }

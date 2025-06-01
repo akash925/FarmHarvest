@@ -15,6 +15,7 @@ import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
 import Sell from "@/pages/Sell";
 import Listings from "@/pages/Listings";
+import Login from "@/pages/Login";
 import Messages from "@/pages/Messages";
 import MarketplaceMap from "@/pages/MarketplaceMap";
 import FarmSpaces from "@/pages/FarmSpaces";
@@ -45,6 +46,7 @@ function App() {
             <Route path="/checkout/:listingId" component={Checkout} />
             <Route path="/orders" component={MyOrders} />
             <Route path="/auth" component={Auth} />
+            <Route path="/login" component={Login} />
             <Route path="/sell" component={Sell} />
             <Route path="/listings" component={Listings} />
             <Route path="/messages" component={Messages} />
