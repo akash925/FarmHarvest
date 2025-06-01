@@ -61,7 +61,7 @@ export default function UserProfile() {
               <Avatar className="h-24 w-24">
                 <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
                 <AvatarFallback className="text-2xl">
-                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                  {(user.name && user.name.charAt(0)) || (user.email && user.email.charAt(0).toUpperCase()) || "U"}
                 </AvatarFallback>
               </Avatar>
               
@@ -149,7 +149,7 @@ export default function UserProfile() {
                     <h3 className="font-semibold mb-1">{listing.title}</h3>
                     <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{listing.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary">${listing.pricePerUnit}/{listing.unit}</span>
+                      <span className="font-bold text-primary">${listing.price}/{listing.unit}</span>
                       <Badge variant="secondary">{listing.category}</Badge>
                     </div>
                   </div>

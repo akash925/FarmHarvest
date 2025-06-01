@@ -22,9 +22,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/use-auth";
 
 function App() {
-  // Temporarily disabled authentication loading check to fix rendering issues
-  // const { isInitializing } = useAuth();
-  const isInitializing = false;
+  const { isInitializing } = useAuth();
 
   if (isInitializing) {
     return (
