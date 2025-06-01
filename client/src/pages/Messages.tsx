@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Send, User, Clock } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/lib/auth";
 
 interface Message {
   id: number;
