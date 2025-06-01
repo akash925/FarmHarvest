@@ -15,6 +15,7 @@ import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
+import SendMessage from "@/pages/SendMessage";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -52,6 +53,7 @@ function App() {
             <Route path="/seller-profile-setup" component={SellerProfileSetup} />
             <Route path="/farm-spaces" component={FarmSpaces} />
             <Route path="/farm-spaces/:id" component={FarmSpaceDetail} />
+            <Route path="/farm-spaces/:id/message" component={SendMessage} />
             <Route component={NotFound} />
           </Switch>
         </main>

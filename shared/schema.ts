@@ -124,6 +124,18 @@ export const farmSpaces = pgTable("farm_spaces", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Messages table for user communication
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  recipientId: integer("recipient_id").notNull().references(() => users.id),
+  farmSpaceId: integer("farm_space_id").references(() => farmSpaces.id),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Create insert schemas for new tables
 export const insertSellerProfileSchema = createInsertSchema(sellerProfiles).omit({
   id: true,
@@ -140,6 +152,12 @@ export const insertFarmSpaceSchema = createInsertSchema(farmSpaces).omit({
   id: true,
   createdAt: true,
   updatedAt: true
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+  isRead: true
 });
 
 // Define types
@@ -163,3 +181,6 @@ export type InsertProfileMedia = z.infer<typeof insertProfileMediaSchema>;
 
 export type FarmSpace = typeof farmSpaces.$inferSelect;
 export type InsertFarmSpace = z.infer<typeof insertFarmSpaceSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;

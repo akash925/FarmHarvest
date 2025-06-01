@@ -1083,6 +1083,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch farm space", error: error.message });
     }
   });
+
+  // Messages API
+  app.post("/api/messages", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { recipientId, subject, message, farmSpaceId } = req.body;
+
+      if (!recipientId || !subject || !message) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const messageData = {
+        senderId: req.session.userId,
+        recipientId,
+        subject,
+        message,
+        farmSpaceId: farmSpaceId || null
+      };
+
+      const newMessage = await storage.createMessage(messageData);
+      res.status(201).json(newMessage);
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message", error: error.message });
+    }
+  });
   
   const httpServer = createServer(app);
   return httpServer;

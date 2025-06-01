@@ -261,13 +261,17 @@ export default function FarmSpaceDetail() {
                 
                 <Separator />
                 
-                <Button className="w-full" size="lg">
-                  Send Message
-                </Button>
+                <Link href={`/farm-spaces/${id}/message`}>
+                  <Button className="w-full" size="lg">
+                    Send Message
+                  </Button>
+                </Link>
                 
-                <Button variant="outline" className="w-full">
-                  View Profile
-                </Button>
+                <Link href={`/users/${farmSpace.sellerProfileId}`}>
+                  <Button variant="outline" className="w-full">
+                    View Profile
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
