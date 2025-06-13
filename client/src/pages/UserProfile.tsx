@@ -148,10 +148,6 @@ export default function UserProfile() {
                             {user.zip}
                           </span>
                         )}
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-4 w-4" />
-                          {user.email}
-                        </span>
                       </div>
                     </div>
                   </div>

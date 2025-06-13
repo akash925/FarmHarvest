@@ -153,9 +153,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email signup endpoint for farmer account creation
   app.post("/api/auth/signup", async (req, res) => {
     try {
-      // Validate request body
-      const emailSignupSchema = insertUserSchema.extend({
-        password: z.string().min(8, { message: "Password must be at least 8 characters" })
+      // Create simplified signup schema
+      const emailSignupSchema = z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Valid email is required"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        zip: z.string().optional()
       });
       
       const validation = emailSignupSchema.safeParse(req.body);
@@ -167,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { password, ...userData } = req.body;
+      const { password, ...userData } = validation.data;
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);

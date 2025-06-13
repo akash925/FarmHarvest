@@ -59,12 +59,11 @@ app.use(session({
   rolling: false, // Don't reset expiry on every request
   name: 'farmSessionId',
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     secure: false,
-    httpOnly: false, // Allow frontend access for debugging
-    sameSite: 'lax', // Better for development environment
-    path: '/',
-    domain: undefined // Let browser set domain
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/'
   }
 }));
 
