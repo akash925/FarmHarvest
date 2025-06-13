@@ -10,7 +10,7 @@ import UserProfile from "@/pages/UserProfile";
 import EditProfile from "@/pages/EditProfile";
 import Checkout from "@/pages/Checkout";
 import MyOrders from "@/pages/MyOrders";
-import Auth from "@/pages/FixedAuth";
+import Auth from "@/pages/SimpleLogin";
 import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
 import SellerProfileSetup from "@/pages/SellerProfileSetup";
 import Sell from "@/pages/Sell";
