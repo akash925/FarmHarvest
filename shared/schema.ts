@@ -100,7 +100,7 @@ export const profileMedia = pgTable("profile_media", {
   id: serial("id").primaryKey(),
   sellerProfileId: integer("seller_profile_id").notNull().references(() => sellerProfiles.id),
   mediaType: text("media_type").notNull(), // photo, video
-  url: text("url").notNull(),
+  mediaUrl: text("media_url").notNull(),
   caption: text("caption"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
