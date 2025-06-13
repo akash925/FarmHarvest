@@ -6,7 +6,6 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { apiRequest } from "./queryClient";
 
 export interface User {
   id: number;
@@ -28,20 +27,26 @@ interface AuthContextValue {
   signOut: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue>({
+const defaultAuthContext: AuthContextValue = {
   user: null,
   token: null,
   isInitializing: true,
   isAuthenticated: false,
-  signIn: async () => {},
-  signOut: () => {}
-});
+  signIn: async () => {
+    throw new Error("Auth not initialized");
+  },
+  signOut: () => {
+    console.warn("Auth not initialized");
+  }
+};
+
+const AuthContext = createContext<AuthContextValue>(defaultAuthContext);
 
 export { AuthContext };
 
-export function useAuth() {
+export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  return ctx;
+  return ctx || defaultAuthContext;
 }
 
 interface AuthProviderProps {
@@ -54,6 +59,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    
     const checkAuth = async () => {
       try {
         const response = await fetch("/api/auth/session", {
@@ -64,24 +71,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
           },
         });
         
+        if (!mounted) return;
+        
         if (response.ok) {
           const data = await response.json();
-          if (data.user) {
+          if (data.user && mounted) {
             setUser(data.user);
-            setIsInitializing(false);
-            return;
           }
+        } else if (mounted) {
+          setUser(null);
         }
-        setUser(null);
       } catch (error) {
         console.error("Auth check failed:", error);
-        setUser(null);
+        if (mounted) {
+          setUser(null);
+        }
       } finally {
-        setIsInitializing(false);
+        if (mounted) {
+          setIsInitializing(false);
+        }
       }
     };
 
     checkAuth();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function signIn(email: string, password: string) {
