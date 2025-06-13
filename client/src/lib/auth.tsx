@@ -28,13 +28,19 @@ interface AuthContextValue {
   signOut: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  token: null,
+  isInitializing: true,
+  isAuthenticated: false,
+  signIn: async () => {},
+  signOut: () => {}
+});
 
 export { AuthContext };
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
   return ctx;
 }
 
@@ -48,7 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    const checkAuth = async () => {
       try {
         const response = await fetch("/api/auth/session", {
           method: "GET",
@@ -62,6 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const data = await response.json();
           if (data.user) {
             setUser(data.user);
+            setIsInitializing(false);
             return;
           }
         }
@@ -72,7 +79,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } finally {
         setIsInitializing(false);
       }
-    })();
+    };
+
+    checkAuth();
   }, []);
 
   async function signIn(email: string, password: string) {
