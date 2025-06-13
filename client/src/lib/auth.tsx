@@ -27,26 +27,16 @@ interface AuthContextValue {
   signOut: () => void;
 }
 
-const defaultAuthContext: AuthContextValue = {
-  user: null,
-  token: null,
-  isInitializing: false,
-  isAuthenticated: false,
-  signIn: async () => {
-    console.warn("Auth provider not ready");
-  },
-  signOut: () => {
-    console.warn("Auth provider not ready");
-  }
-};
-
-const AuthContext = createContext<AuthContextValue>(defaultAuthContext);
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export { AuthContext };
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  return ctx || defaultAuthContext;
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return ctx;
 }
 
 interface AuthProviderProps {
@@ -93,9 +83,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
 
-    checkAuth();
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(checkAuth, 100);
     
     return () => {
+      clearTimeout(timer);
       mounted = false;
     };
   }, []);
@@ -153,6 +145,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn,
     signOut,
   };
+
+  console.log("AuthProvider rendering with:", { user: !!user, isInitializing, isAuthenticated: !!user });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
