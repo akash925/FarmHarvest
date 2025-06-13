@@ -214,6 +214,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
+      // For development, we'll use simple password validation
+      // In production, you'd compare against a hashed password
+      const isValidPassword = password === "password" || password === "test123";
+      
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
       // Regenerate session ID to prevent session fixation
       req.session.regenerate((err) => {
         if (err) {
@@ -231,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(500).json({ message: "Failed to save session" });
           }
           
-          console.log("Session saved successfully for user:", user.id, "Session ID:", req.sessionID);
+          console.log("User", user.email, "logged in successfully. Session ID:", req.sessionID);
           return res.json({ user });
         });
       });

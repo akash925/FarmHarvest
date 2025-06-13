@@ -139,10 +139,10 @@ export default function Navbar() {
               </DropdownMenu>
             ) : (
               <>
-                <Link href="/auth" className="text-primary-600 hover:text-primary-800 px-3 py-2 rounded-md text-sm font-medium">
+                <Link href="/login" className="text-primary-600 hover:text-primary-800 px-3 py-2 rounded-md text-sm font-medium">
                   Sign In
                 </Link>
-                <Link href="/auth" className="btn-primary">
+                <Link href="/signup" className="btn-primary">
                   Get Started
                 </Link>
               </>

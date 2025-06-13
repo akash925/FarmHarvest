@@ -27,7 +27,7 @@ export default function Login() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "akash.agarwal@conmitto.io",
-      password: "test123"
+      password: "password"
     }
   });
 

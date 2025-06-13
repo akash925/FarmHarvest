@@ -105,7 +105,7 @@ export default function SimpleLogin() {
               
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Demo credentials: test@example.com / password
+                  Demo credentials: akash.agarwal@conmitto.io / password
                 </p>
               </div>
             </CardContent>
