@@ -42,7 +42,7 @@ export default function Sell() {
     
     (async () => {
       try {
-        const res = await fetch(`/api/seller-profiles/${auth.user.id}`, {
+        const res = await fetch(`/api/seller-profiles/${auth.user!.id}`, {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",

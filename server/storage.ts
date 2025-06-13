@@ -195,7 +195,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createListing(listing: InsertListing): Promise<Listing> {
-    const [newListing] = await db.insert(listings).values(listing).returning();
+    const [newListing] = await db.insert(listings).values(listing as any).returning();
     return newListing;
   }
   
