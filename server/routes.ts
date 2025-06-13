@@ -395,11 +395,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "You must create a seller profile first" });
       }
       
+      // Convert date strings to Date objects if present
+      const farmSpaceData = { ...farmSpace, sellerProfileId: profile.id };
+      if (farmSpaceData.availableFrom) {
+        farmSpaceData.availableFrom = new Date(farmSpaceData.availableFrom);
+      }
+      if (farmSpaceData.availableUntil) {
+        farmSpaceData.availableUntil = new Date(farmSpaceData.availableUntil);
+      }
+
       // Create farm space
-      const newSpace = await storage.createFarmSpace({
-        ...farmSpace,
-        sellerProfileId: profile.id
-      });
+      const newSpace = await storage.createFarmSpace(farmSpaceData);
       
       res.status(201).json({ farmSpace: newSpace });
     } catch (error: any) {
