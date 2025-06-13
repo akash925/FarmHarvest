@@ -27,7 +27,7 @@ export default function Sell() {
   // 2) Redirect to /login if not authenticated
   useEffect(() => {
     if (!auth.isAuthenticated) {
-      setLocation("/auth");
+      setLocation("/login");
     }
   }, [auth.isAuthenticated, setLocation]);
 
@@ -36,14 +36,13 @@ export default function Sell() {
     return null;
   }
 
-  // 3) Once authenticated, check if user has a farm profile
+  // 3) Once authenticated, check if user has a seller profile
   useEffect(() => {
     if (!auth.user) return;
     
     (async () => {
       try {
-        // Fetch farm spaces for this user using session-based auth
-        const res = await fetch(`/api/farm-spaces`, {
+        const res = await fetch(`/api/seller-profiles/${auth.user.id}`, {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -51,49 +50,48 @@ export default function Sell() {
         });
         
         if (res.ok) {
-          const { farmSpaces } = await res.json();
-          setHasFarm(Array.isArray(farmSpaces) && farmSpaces.length > 0);
+          setHasFarm(true);
         } else {
           setHasFarm(false);
         }
       } catch (err) {
-        console.error("Error fetching farm profile:", err);
+        console.error("Error fetching seller profile:", err);
         setHasFarm(false);
       }
     })();
   }, [auth.user]);
 
-  // 4) While we don't yet know if they have a farm, show spinner
+  // 4) While we don't yet know if they have a seller profile, show spinner
   if (hasFarm === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-        <p className="ml-3">Checking farm profile…</p>
+        <p className="ml-3">Loading...</p>
       </div>
     );
   }
 
-  // 5) If user has no farm, prompt them to create one
+  // 5) If user has no seller profile, prompt them to create one
   if (hasFarm === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
         <Helmet>
-          <title>Create Farm Profile - FarmDirect</title>
-          <meta name="description" content="Create your farm profile to start selling fresh produce directly to customers." />
+          <title>Create Seller Profile - FarmDirect</title>
+          <meta name="description" content="Create your seller profile to start selling fresh produce directly to customers." />
         </Helmet>
         
         <div className="container mx-auto px-4 py-16">
           <Card className="max-w-lg mx-auto mt-12">
             <CardHeader>
-              <CardTitle className="text-center">Create Your Farm Profile</CardTitle>
+              <CardTitle className="text-center">Create Your Seller Profile</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-center text-gray-600">
-                You need a farm profile before you can sell produce. This helps customers learn about your farm and builds trust.
+                You need a seller profile before you can sell produce. This helps customers learn about your farm and builds trust.
               </p>
               <div className="space-y-3">
-                <Button onClick={() => setLocation("/create-farm")} className="w-full">
-                  Create Farm Profile
+                <Button onClick={() => setLocation("/seller-profile-setup")} className="w-full">
+                  Create Seller Profile
                 </Button>
                 <Button variant="outline" onClick={() => setLocation("/")} className="w-full">
                   Back to Home
