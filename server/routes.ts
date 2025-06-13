@@ -579,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Not authenticated" });
       }
       
-      // Validate listing data
+      // Validate listing data (without userId)
       const validationResult = insertListingSchema.safeParse(req.body);
       
       if (!validationResult.success) {
@@ -589,8 +589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const listingData = validationResult.data;
-      listingData.userId = req.session.userId;
+      // Add userId after validation
+      const listingData = {
+        ...validationResult.data,
+        userId: req.session.userId
+      };
       
       // Create listing
       const listing = await storage.createListing(listingData);

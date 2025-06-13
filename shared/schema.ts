@@ -65,6 +65,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertListingSchema = createInsertSchema(listings).omit({
   id: true,
+  userId: true,
   createdAt: true
 });
 
