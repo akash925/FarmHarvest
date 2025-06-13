@@ -26,8 +26,20 @@ export async function apiRequest(
 
 function getQueryFn(): QueryFunction {
   return async ({ queryKey }) => {
-    const [method, url, data] = queryKey as [string, string, any];
-    const res = await apiRequest(method, url, data);
+    const url = queryKey[0] as string;
+    const res = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!res.ok) {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    }
+    
     return res.json();
   };
 }

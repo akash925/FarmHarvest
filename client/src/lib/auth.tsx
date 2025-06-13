@@ -30,13 +30,13 @@ interface AuthContextValue {
 const defaultAuthContext: AuthContextValue = {
   user: null,
   token: null,
-  isInitializing: true,
+  isInitializing: false,
   isAuthenticated: false,
   signIn: async () => {
-    throw new Error("Auth not initialized");
+    console.warn("Auth provider not ready");
   },
   signOut: () => {
-    console.warn("Auth not initialized");
+    console.warn("Auth provider not ready");
   }
 };
 
@@ -101,28 +101,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    const response = await fetch("/api/auth/signin", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-      }),
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.user) {
-        setUser(data.user);
-        return;
+    try {
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          setUser(data.user);
+          setIsInitializing(false);
+          return;
+        }
       }
+      
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Login failed");
+    } catch (error) {
+      console.error("SignIn error:", error);
+      throw error;
     }
-    
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Login failed");
   }
 
   async function signOut() {

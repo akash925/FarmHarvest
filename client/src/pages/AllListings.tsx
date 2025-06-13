@@ -44,7 +44,7 @@ export default function AllListings() {
   
   // Fetch listings based on filters
   const { data, isLoading, error } = useQuery<{listings: any[]}>({
-    queryKey: ['GET', `/api/listings?${searchParams.toString()}`],
+    queryKey: [`/api/listings?${searchParams.toString()}`],
   });
 
   // Handle search from the search form
