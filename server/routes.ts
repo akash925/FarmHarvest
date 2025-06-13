@@ -58,29 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  // Simple auth session endpoint to check if user is logged in
-  app.get("/api/auth/session", async (req, res) => {
-    // Auto-login feature disabled since we have created real accounts
-    // We'll keep the existing session which should contain our Akash account
 
-    // Now check session and return user data
-    if (req.session.userId) {
-      try {
-        const user = await storage.getUserById(req.session.userId);
-        if (user) {
-          return res.status(200).json({ user });
-        } else {
-          req.session.destroy(() => {});
-          return res.status(401).json({ message: "User not found" });
-        }
-      } catch (error) {
-        console.error("Session verification error:", error);
-        return res.status(500).json({ message: "Error verifying session" });
-      }
-    } else {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-  });
 
   // Authentication endpoints
   app.post("/api/auth/google", async (req, res) => {
@@ -148,9 +126,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Session check endpoint
   app.get("/api/auth/session", async (req, res) => {
     try {
-      console.log("Session check - Session ID:", req.sessionID, "User ID:", req.session?.userId);
+      console.log("[GET] /api/auth/session - Session ID:", req.sessionID, "User ID:", req.session?.userId);
       
       if (!req.session?.userId) {
         return res.status(401).json({ message: "Not authenticated" });
@@ -328,14 +307,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create seller profile
   app.post("/api/seller-profiles", async (req, res) => {
     try {
-      // For now, allow creating profiles without auth to test functionality
-      // In production, this should require authentication
-      const userId = req.session.userId || 3; // Default to user 3 for testing
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       
       const profileData = req.body;
       
       // Validate that this user doesn't already have a profile
-      const existingProfile = await storage.getSellerProfile(userId);
+      const existingProfile = await storage.getSellerProfile(req.session.userId);
       
       if (existingProfile) {
         return res.status(400).json({ message: "User already has a seller profile" });
@@ -344,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create profile with the user ID
       const newProfile = await storage.createSellerProfile({
         ...profileData,
-        userId: userId
+        userId: req.session.userId
       });
       
       res.status(201).json({ profile: newProfile });
@@ -553,71 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/listings/featured", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 8;
-      let listings = await storage.getFeaturedListings(limit);
-      
-      // If no listings found, create some sample listings for demonstration
-      if (listings.length === 0) {
-        const testUser = await storage.getUserById(1); // Get the test user
-        
-        if (testUser) {
-          // Create some sample produce listings
-          const sampleListings = [
-            {
-              title: "Fresh Organic Tomatoes",
-              description: "Vine-ripened tomatoes grown without pesticides. Sweet and juicy - perfect for salads or cooking.",
-              price: 499, // Stored in cents
-              quantity: 24,
-              unit: "lb",
-              category: "vegetables",
-              zip: "90210",
-              image: "https://images.unsplash.com/photo-1524593166156-312f362cada0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80",
-              userId: testUser.id
-            },
-            {
-              title: "Backyard Fresh Eggs",
-              description: "Free-range eggs from happy hens. Collected daily for maximum freshness.",
-              price: 699, // Stored in cents
-              quantity: 12,
-              unit: "dozen",
-              category: "eggs",
-              zip: "90210",
-              image: "https://images.unsplash.com/photo-1598965675045-45c7d5a09d8f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2071&q=80",
-              userId: testUser.id
-            },
-            {
-              title: "Seasonal Berry Mix",
-              description: "A delicious mix of locally grown strawberries, blueberries, and blackberries. Perfect for snacking or baking.",
-              price: 799, // Stored in cents
-              quantity: 16,
-              unit: "oz",
-              category: "fruits",
-              zip: "90210",
-              image: "https://images.unsplash.com/photo-1563746924237-f81701bda6a9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2071&q=80",
-              userId: testUser.id
-            },
-            {
-              title: "Fresh Herb Bundle",
-              description: "Freshly cut rosemary, thyme, and basil. Grown in our garden without chemicals.",
-              price: 399, // Stored in cents
-              quantity: 1,
-              unit: "bundle",
-              category: "herbs",
-              zip: "90210",
-              image: "https://images.unsplash.com/photo-1601648764658-cf37e8c89b70?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2071&q=80",
-              userId: testUser.id
-            }
-          ];
-          
-          // Add the sample listings to the database
-          for (const listing of sampleListings) {
-            await storage.createListing(listing);
-          }
-          
-          // Fetch the newly added listings
-          listings = await storage.getFeaturedListings(limit);
-        }
-      }
-      
+      const listings = await storage.getFeaturedListings(limit);
       return res.status(200).json({ listings });
     } catch (error) {
       console.error("Get featured listings error:", error);

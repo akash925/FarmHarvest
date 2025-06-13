@@ -11,15 +11,14 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest(
   method: string,
   url: string,
-  data?: unknown,
-  token?: string
+  data?: unknown
 ): Promise<Response> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(url, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
+    credentials: "include", // Include cookies for session-based auth
   });
   await throwIfResNotOk(res);
   return res;
@@ -28,8 +27,7 @@ export async function apiRequest(
 function getQueryFn(): QueryFunction {
   return async ({ queryKey }) => {
     const [method, url, data] = queryKey as [string, string, any];
-    const token = localStorage.getItem("fh_token") || undefined;
-    const res = await apiRequest(method, url, data, token);
+    const res = await apiRequest(method, url, data);
     return res.json();
   };
 }
