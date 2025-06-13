@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from "@/lib/auth";
 
 export default function CTASection() {
   const { user, isAuthenticated } = useAuth();

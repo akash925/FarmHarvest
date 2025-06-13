@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Helmet } from 'react-helmet-async';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from "@/lib/auth";
 import { useQuery } from '@tanstack/react-query';
 import { 
   Card, 
