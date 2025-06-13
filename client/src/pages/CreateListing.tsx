@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from "@/lib/simpleAuth";
 import { useToast } from '@/hooks/use-toast';
 import { Helmet } from 'react-helmet-async';
 import { apiRequest } from '@/lib/queryClient';

@@ -3,7 +3,7 @@ import { useRoute, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { apiRequest } from '@/lib/queryClient';
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/simpleAuth";
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {

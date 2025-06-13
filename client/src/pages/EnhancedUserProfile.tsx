@@ -10,7 +10,7 @@ import {
   Package, Users, Award, Shield, MessageCircle 
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/simpleAuth";
 import TrustBadges from "@/components/TrustBadges";
 
 export default function EnhancedUserProfile() {

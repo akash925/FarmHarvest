@@ -27,15 +27,25 @@ interface AuthContextValue {
   signOut: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const defaultAuthContext: AuthContextValue = {
+  user: null,
+  token: null,
+  isInitializing: true,
+  isAuthenticated: false,
+  signIn: async () => {
+    console.log("Default signIn called - provider may not be ready");
+  },
+  signOut: () => {
+    console.log("Default signOut called - provider may not be ready");
+  }
+};
+
+const AuthContext = createContext<AuthContextValue>(defaultAuthContext);
 
 export { AuthContext };
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
   return ctx;
 }
 

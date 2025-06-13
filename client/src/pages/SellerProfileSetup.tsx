@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/simpleAuth";
 
 import { apiRequest } from '@/lib/queryClient';
 
