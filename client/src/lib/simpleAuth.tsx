@@ -39,9 +39,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check authentication status on mount
+  // Check authentication status on mount and periodically
   useEffect(() => {
     checkAuthStatus();
+    
+    // Check session every 30 seconds to maintain sync
+    const interval = setInterval(checkAuthStatus, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const checkAuthStatus = async () => {
