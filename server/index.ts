@@ -46,7 +46,7 @@ app.use((req, res, next) => {
   }
 });
 
-// Set up session handling with fixed configuration
+// Set up session handling with stable configuration
 app.use(session({
   store: new PgSession({
     pool,
@@ -54,14 +54,14 @@ app.use(session({
     createTableIfMissing: true,
   }),
   secret: 'farm-produce-marketplace-secret-key-2024',
-  resave: false, // Don't save session if unmodified
-  saveUninitialized: false, // Don't save empty sessions
-  rolling: false, // Don't reset expiry on every request
+  resave: true, // Save session on every request to ensure persistence
+  saveUninitialized: true, // Create sessions for unauthenticated users
+  rolling: false,
   name: 'farmSessionId',
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days for better persistence
     secure: false,
-    httpOnly: false, // Allow frontend access for debugging
+    httpOnly: true, // Security best practice
     sameSite: 'lax',
     path: '/'
   }

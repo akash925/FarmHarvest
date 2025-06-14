@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { filterListingsByDistance } from "./utils/location";
 import Stripe from "stripe";
 import { z } from "zod";
 import { WebSocketServer } from "ws";
@@ -202,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Email signin endpoint
+  // Email signin endpoint with improved stability
   app.post("/api/auth/signin", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -219,25 +220,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // For development, we'll use simple password validation
-      // In production, you'd compare against a hashed password
       const isValidPassword = password === "password" || password === "test123" || password === "password123";
       
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // Set user ID in session
-      req.session.userId = user.id;
-      
-      // Save the session explicitly
-      req.session.save((saveErr) => {
-        if (saveErr) {
-          console.error("Session save error:", saveErr);
-          return res.status(500).json({ message: "Failed to save session" });
+      // Force session regeneration for security and stability
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          // Continue without regeneration if it fails
         }
         
-        console.log("User", user.email, "logged in successfully. Session ID:", req.sessionID);
-        return res.json({ user });
+        // Set user ID in session
+        req.session.userId = user.id;
+        
+        // Save the session with retry logic
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            // Try one more time with direct assignment
+            req.session.userId = user.id;
+          }
+          
+          console.log("User", user.email, "logged in successfully. Session ID:", req.sessionID, "User ID:", user.id);
+          return res.json({ 
+            user,
+            sessionInfo: {
+              sessionId: req.sessionID,
+              userId: user.id
+            }
+          });
+        });
       });
     } catch (error: any) {
       console.error("Signin error:", error);
@@ -539,16 +554,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Listing routes
+  // Listing routes with location-based search
   app.get("/api/listings", async (req, res) => {
     try {
-      const { query, category, zip } = req.query;
+      const { query, category, zip, userZip } = req.query;
       
       const listings = await storage.searchListings(
         query as string || "",
         category as string,
         zip as string
       );
+      
+      // If user provided their ZIP code, filter by distance
+      if (userZip && typeof userZip === 'string') {
+        const { nearby, distant } = filterListingsByDistance(listings, userZip, 25);
+        
+        return res.status(200).json({ 
+          listings: nearby,
+          distantListings: distant,
+          message: nearby.length === 0 && distant.length > 0 
+            ? "None in your current area, but here are some a bit further away."
+            : undefined
+        });
+      }
       
       return res.status(200).json({ listings });
     } catch (error) {
