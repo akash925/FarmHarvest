@@ -100,6 +100,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      // Clear any cached queries
+      window.location.reload();
     }
   };
 

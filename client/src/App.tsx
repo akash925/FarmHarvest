@@ -18,6 +18,7 @@ import Listings from "@/pages/Listings";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Messages from "@/pages/Messages";
+import AuthTest from "@/pages/AuthTest";
 import MarketplaceMap from "@/pages/MarketplaceMap";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
@@ -45,6 +46,7 @@ function App() {
             <Route path="/auth" component={Auth} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
+        <Route path="/auth-test" component={AuthTest} />
             <Route path="/sell" component={Sell} />
             <Route path="/listings" component={Listings} />
             <Route path="/messages" component={Messages} />
