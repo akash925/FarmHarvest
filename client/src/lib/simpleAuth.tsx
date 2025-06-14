@@ -79,6 +79,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
+        // Force a refresh of auth status to ensure consistency
+        await checkAuthStatus();
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Login failed');

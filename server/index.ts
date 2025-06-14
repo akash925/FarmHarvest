@@ -54,14 +54,14 @@ app.use(session({
     createTableIfMissing: true,
   }),
   secret: 'farm-produce-marketplace-secret-key-2024',
-  resave: true, // Force session save on every request
-  saveUninitialized: true, // Save new sessions
+  resave: false, // Don't save session if unmodified
+  saveUninitialized: false, // Don't save empty sessions
   rolling: false, // Don't reset expiry on every request
   name: 'farmSessionId',
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     secure: false,
-    httpOnly: true,
+    httpOnly: false, // Allow frontend access for debugging
     sameSite: 'lax',
     path: '/'
   }

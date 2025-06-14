@@ -226,26 +226,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // Regenerate session ID to prevent session fixation
-      req.session.regenerate((err) => {
-        if (err) {
-          console.error("Session regeneration error:", err);
-          return res.status(500).json({ message: "Session error" });
+      // Set user ID in session
+      req.session.userId = user.id;
+      
+      // Save the session explicitly
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session save error:", saveErr);
+          return res.status(500).json({ message: "Failed to save session" });
         }
         
-        // Set user ID in the new session
-        req.session.userId = user.id;
-        
-        // Save the session with proper error handling
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("Session save error:", saveErr);
-            return res.status(500).json({ message: "Failed to save session" });
-          }
-          
-          console.log("User", user.email, "logged in successfully. Session ID:", req.sessionID);
-          return res.json({ user });
-        });
+        console.log("User", user.email, "logged in successfully. Session ID:", req.sessionID);
+        return res.json({ user });
       });
     } catch (error: any) {
       console.error("Signin error:", error);
@@ -277,6 +269,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Direct login error:", error);
       res.status(500).json({ message: "Failed to set user session", error: error.message });
+    }
+  });
+  
+  // Logout endpoint
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+          return res.status(500).json({ message: "Failed to logout" });
+        }
+        
+        res.clearCookie('connect.sid');
+        return res.json({ message: "Logged out successfully" });
+      });
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Failed to logout", error: error.message });
     }
   });
   
