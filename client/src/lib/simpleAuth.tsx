@@ -78,9 +78,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Login successful:', data.user.name, 'Session:', data.sessionInfo);
         setUser(data.user);
-        // Force a refresh of auth status to ensure consistency
-        await checkAuthStatus();
+        
+        // Wait a moment for the session cookie to be set
+        setTimeout(async () => {
+          await checkAuthStatus();
+        }, 100);
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Login failed');
