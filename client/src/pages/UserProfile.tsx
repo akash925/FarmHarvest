@@ -59,6 +59,10 @@ export default function UserProfile() {
     queryKey: [`/api/reviews/seller/${userId}`],
   });
 
+  const { data: farmSpacesData } = useQuery({
+    queryKey: [`/api/farm-spaces/user/${userId}`],
+  });
+
   if (userLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -70,6 +74,7 @@ export default function UserProfile() {
   const user: User | undefined = userData?.user;
   const listings: Listing[] = listingsData?.listings || [];
   const reviews: Review[] = reviewsData?.reviews || [];
+  const farmSpaces: any[] = farmSpacesData?.farmSpaces || [];
 
   if (!user) {
     return (
