@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useAuth } from '@/lib/simpleAuth';
+import { useAuth } from '@/lib/cleanAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -16,64 +16,35 @@ import { Search, Menu, X } from 'lucide-react';
 export default function Navbar() {
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, isAuthenticated, logout } = useAuth();
   const [hasSellerProfile, setHasSellerProfile] = useState(false);
   
-  // Direct authentication check without relying on broken context
+  // Check seller profile when user changes
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/session', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          setCurrentUser(data.user);
-          
-          // Check seller profile
-          if (data.user) {
-            try {
-              const profileRes = await fetch(`/api/seller-profiles/${data.user.id}`);
-              if (profileRes.ok) {
-                const profileData = await profileRes.json();
-                setHasSellerProfile(!!profileData?.profile);
-              }
-            } catch (e) {
-              setHasSellerProfile(false);
-            }
+    if (user) {
+      const checkSellerProfile = async () => {
+        try {
+          const profileRes = await fetch(`/api/seller-profiles/${user.id}`);
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            setHasSellerProfile(!!profileData?.profile);
           }
-        } else {
-          setCurrentUser(null);
+        } catch (e) {
           setHasSellerProfile(false);
         }
-      } catch (error) {
-        setCurrentUser(null);
-        setHasSellerProfile(false);
-      }
-    };
-    
-    checkAuth();
-    // Re-check every 30 seconds
-    const interval = setInterval(checkAuth, 30000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  const isAuthenticated = !!currentUser;
+      };
+      checkSellerProfile();
+    } else {
+      setHasSellerProfile(false);
+    }
+  }, [user]);
   
 
   
 
   
   const handleSignOut = async () => {
-    try {
-      await fetch('/api/auth/logout', { 
-        method: 'POST', 
-        credentials: 'include' 
-      });
-      setCurrentUser(null);
-      setHasSellerProfile(false);
-      navigate('/');
-    } catch (error) {
-      console.error('Sign out failed:', error);
-    }
+    logout();
   };
 
   return (
@@ -110,17 +81,17 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={currentUser?.image || ''} alt={currentUser?.name || 'User'} />
-                      <AvatarFallback>{currentUser?.name?.charAt(0) || 'U'}</AvatarFallback>
+                      <AvatarImage src={user?.image || ''} alt={user?.name || 'User'} />
+                      <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/users/${currentUser?.id}`}>Profile</Link>
+                    <Link href={`/users/${user?.id}`}>Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={`/seller-profile/${currentUser?.id}`}>Farmer Profile</Link>
+                    <Link href={`/seller-profile/${user?.id}`}>Farmer Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/seller-profile-setup">Setup Farm Profile</Link>
@@ -139,10 +110,10 @@ export default function Navbar() {
               </DropdownMenu>
             ) : (
               <>
-                <Link href="/login" className="text-primary-600 hover:text-primary-800 px-3 py-2 rounded-md text-sm font-medium">
+                <Link href="/clean-auth" className="text-primary-600 hover:text-primary-800 px-3 py-2 rounded-md text-sm font-medium">
                   Sign In
                 </Link>
-                <Link href="/signup" className="btn-primary">
+                <Link href="/clean-auth" className="btn-primary">
                   Get Started
                 </Link>
               </>
@@ -196,14 +167,14 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <Link 
-                  href={`/users/${currentUser?.id}`} 
+                  href={`/users/${user?.id}`} 
                   className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profile
                 </Link>
                 <Link 
-                  href={`/seller-profile/${currentUser?.id}`}
+                  href={`/seller-profile/${user?.id}`}
                   className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -243,14 +214,14 @@ export default function Navbar() {
             ) : (
               <>
                 <Link 
-                  href="/auth" 
+                  href="/clean-auth" 
                   className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-slate-100"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Sign In
                 </Link>
                 <Link 
-                  href="/auth" 
+                  href="/clean-auth" 
                   className="block px-3 py-2 rounded-md text-base font-medium bg-primary-400 text-white hover:bg-primary-500 mt-1"
                   onClick={() => setMobileMenuOpen(false)}
                 >
