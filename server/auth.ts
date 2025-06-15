@@ -47,37 +47,46 @@ export function configurePassport() {
       let user = await storage.getUserByAuthId('facebook', profile.id);
       
       if (!user) {
-          // Check if user exists with same email
-          const email = profile.emails?.[0]?.value;
-          if (email) {
-            user = await storage.getUserByEmail(email);
-          }
-          
-          if (!user) {
-            // Create new user
-            user = await storage.createUser({
-              name: profile.displayName || 'Facebook User',
-              email: email || `facebook_${profile.id}@temp.com`,
-              image: profile.photos?.[0]?.value,
-              authType: 'facebook',
-              authId: profile.id,
-            });
-          } else {
-            // Link existing user to Facebook
-            await storage.updateUser(user.id, {
+        // Check if user exists with same email
+        const email = profile.emails?.[0]?.value;
+        if (email) {
+          user = await storage.getUserByEmail(email);
+          if (user) {
+            // Update existing user with Facebook info
+            user = await storage.updateUser(user.id, {
               authType: 'facebook',
               authId: profile.id,
               image: profile.photos?.[0]?.value || user.image,
             });
           }
         }
-
-        return done(null, user);
-      } catch (error) {
-        return done(error);
+        
+        if (!user) {
+          // Create new user
+          user = await storage.createUser({
+            name: profile.displayName || 'Facebook User',
+            email: email || `facebook_${profile.id}@temp.com`,
+            image: profile.photos?.[0]?.value,
+            authType: 'facebook',
+            authId: profile.id,
+          });
+        }
+      } else {
+        // Update existing Facebook user
+        const email = profile.emails?.[0]?.value;
+        if (email && email !== user.email) {
+          user = await storage.updateUser(user.id, {
+            email: email,
+            image: profile.photos?.[0]?.value || user.image,
+          });
+        }
       }
-    }));
-  }
+
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  }));
 
   // Instagram Strategy
   passport.use(new InstagramStrategy({
@@ -85,27 +94,26 @@ export function configurePassport() {
     clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || 'instagram_secret_placeholder',
     callbackURL: "/api/auth/instagram/callback"
   }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
-      try {
-        // Check if user exists with Instagram ID
-        let user = await storage.getUserByAuthId('instagram', profile.id);
-        
-        if (!user) {
-          // Create new user
-          user = await storage.createUser({
-            name: profile.displayName || profile.username || 'Instagram User',
-            email: `instagram_${profile.id}@temp.com`,
-            image: profile._json?.profile_picture,
-            authType: 'instagram',
-            authId: profile.id,
-          });
-        }
-
-        return done(null, user);
-      } catch (error) {
-        return done(error);
+    try {
+      // Check if user exists with Instagram ID
+      let user = await storage.getUserByAuthId('instagram', profile.id);
+      
+      if (!user) {
+        // Create new user
+        user = await storage.createUser({
+          name: profile.displayName || profile.username || 'Instagram User',
+          email: `instagram_${profile.id}@temp.com`,
+          image: profile._json?.profile_picture,
+          authType: 'instagram',
+          authId: profile.id,
+        });
       }
-    }));
-  }
+
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
+  }));
 
   // Serialize/deserialize user for session
   passport.serializeUser((user: any, done) => {
@@ -129,10 +137,36 @@ export function setupAuthRoutes(app: Express) {
   app.use(passport.session());
 
   // Local authentication routes
+  app.post('/api/auth/signin', (req, res, next) => {
+    passport.authenticate('local', (err: any, user: any, info: any) => {
+      if (err) {
+        return res.status(500).json({ message: 'Authentication error' });
+      }
+      if (!user) {
+        return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+      }
+      
+      req.logIn(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Session error' });
+        }
+        
+        // Force session save
+        req.session.userId = user.id;
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+          }
+          res.json({ user });
+        });
+      });
+    })(req, res, next);
+  });
+
   app.post('/api/auth/signup', async (req, res) => {
     try {
       const { name, email, password, zip } = req.body;
-
+      
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
@@ -148,69 +182,32 @@ export function setupAuthRoutes(app: Express) {
         email,
         password: hashedPassword,
         zip,
-        authType: 'email',
+        authType: 'local',
         authId: email,
       });
 
-      // Log in user
-      req.login(user, (err) => {
+      // Log in the user
+      req.logIn(user, (err) => {
         if (err) {
-          return res.status(500).json({ message: 'Login failed after signup' });
+          return res.status(500).json({ message: 'Session error' });
         }
-        res.json({ user: { ...user, password: undefined } });
+        
+        req.session.userId = user.id;
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save error:', err);
+          }
+          res.json({ user });
+        });
       });
-    } catch (error) {
-      console.error('Signup error:', error);
-      res.status(500).json({ message: 'Signup failed' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
-  app.post('/api/auth/signin', (req, res, next) => {
-    passport.authenticate('local', (err: any, user: any, info: any) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ message: info?.message || 'Login failed' });
-      }
-      
-      req.login(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-        res.json({ user: { ...user, password: undefined } });
-      });
-    })(req, res, next);
-  });
-
-  // Facebook authentication routes
-  app.get('/api/auth/facebook',
-    passport.authenticate('facebook', { scope: ['email'] })
-  );
-
-  app.get('/api/auth/facebook/callback',
-    passport.authenticate('facebook', { failureRedirect: '/login' }),
-    (req, res) => {
-      res.redirect('/');
-    }
-  );
-
-  // Instagram authentication routes
-  app.get('/api/auth/instagram',
-    passport.authenticate('instagram')
-  );
-
-  app.get('/api/auth/instagram/callback',
-    passport.authenticate('instagram', { failureRedirect: '/login' }),
-    (req, res) => {
-      res.redirect('/');
-    }
-  );
-
-  // Session management
   app.get('/api/auth/session', (req, res) => {
     if (req.isAuthenticated() && req.user) {
-      res.json({ user: { ...req.user, password: undefined } });
+      res.json({ user: req.user });
     } else {
       res.status(401).json({ message: 'Not authenticated' });
     }
@@ -219,9 +216,45 @@ export function setupAuthRoutes(app: Express) {
   app.post('/api/auth/logout', (req, res) => {
     req.logout((err) => {
       if (err) {
-        return res.status(500).json({ message: 'Logout failed' });
+        return res.status(500).json({ message: 'Logout error' });
       }
-      res.json({ message: 'Logged out successfully' });
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Session destroy error' });
+        }
+        res.clearCookie('farmSessionId');
+        res.json({ message: 'Logged out successfully' });
+      });
     });
   });
+
+  // Facebook OAuth routes
+  app.get('/api/auth/facebook', (req, res) => {
+    if (!process.env.FACEBOOK_APP_ID) {
+      return res.status(501).json({ message: 'Facebook login not configured. Please contact administrator.' });
+    }
+    passport.authenticate('facebook', { scope: ['email'] })(req, res);
+  });
+  
+  app.get('/api/auth/facebook/callback',
+    passport.authenticate('facebook', { failureRedirect: '/clean-auth?error=facebook' }),
+    (req, res) => {
+      res.redirect('/?login=success');
+    }
+  );
+
+  // Instagram OAuth routes
+  app.get('/api/auth/instagram', (req, res) => {
+    if (!process.env.INSTAGRAM_CLIENT_ID) {
+      return res.status(501).json({ message: 'Instagram login not configured. Please contact administrator.' });
+    }
+    passport.authenticate('instagram')(req, res);
+  });
+  
+  app.get('/api/auth/instagram/callback',
+    passport.authenticate('instagram', { failureRedirect: '/clean-auth?error=instagram' }),
+    (req, res) => {
+      res.redirect('/?login=success');
+    }
+  );
 }
