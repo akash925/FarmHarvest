@@ -52,6 +52,7 @@ function App() {
         <Route path="/auth-test" component={AuthTest} />
         <Route path="/stable-login" component={StableLogin} />
         <Route path="/comprehensive-auth" component={ComprehensiveAuth} />
+        <Route path="/clean-auth" component={CleanAuth} />
             <Route path="/sell" component={Sell} />
             <Route path="/listings" component={Listings} />
             <Route path="/messages" component={Messages} />

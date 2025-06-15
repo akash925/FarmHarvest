@@ -1,6 +1,8 @@
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
+// @ts-ignore
 import { Strategy as FacebookStrategy } from 'passport-facebook';
+// @ts-ignore
 import { Strategy as InstagramStrategy } from 'passport-instagram';
 import bcrypt from 'bcrypt';
 import { storage } from './storage';
@@ -40,7 +42,7 @@ export function configurePassport() {
       clientSecret: process.env.FACEBOOK_APP_SECRET,
       callbackURL: "/api/auth/facebook/callback",
       profileFields: ['id', 'displayName', 'email', 'photos']
-    }, async (accessToken, refreshToken, profile, done) => {
+    }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
       try {
         // Check if user exists with Facebook ID
         let user = await storage.getUserByAuthId('facebook', profile.id);
@@ -84,7 +86,7 @@ export function configurePassport() {
       clientID: process.env.INSTAGRAM_CLIENT_ID,
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
       callbackURL: "/api/auth/instagram/callback"
-    }, async (accessToken, refreshToken, profile, done) => {
+    }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
       try {
         // Check if user exists with Instagram ID
         let user = await storage.getUserByAuthId('instagram', profile.id);

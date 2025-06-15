@@ -121,7 +121,10 @@ FarmDirect is a full-stack web application that connects local farmers and garde
 - Automatic connection pooling and management
 
 ## Changelog
-- June 14, 2025. Initial setup
+- June 15, 2025: Complete authentication system overhaul - replaced complex auth with clean, working solution
+- June 15, 2025: Added Facebook/Instagram OAuth support with passport.js integration
+- June 15, 2025: Implemented reliable session-based authentication with PostgreSQL storage
+- June 14, 2025: Initial setup
 
 ## User Preferences
 
