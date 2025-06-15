@@ -29,25 +29,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Simple CORS setup for same-origin requests
-app.use((req, res, next) => {
-  // For same-origin requests (Vite dev server), no CORS headers needed
-  // Only add CORS headers for cross-origin requests
-  const origin = req.headers.origin;
-  if (origin && origin !== `http://localhost:5000`) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
-  }
-  
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
+// Remove all CORS middleware - not needed for same-origin requests
+// Vite dev server proxies API requests to same origin
 
 // Set up session handling - simplified for debugging
 app.use(session({
