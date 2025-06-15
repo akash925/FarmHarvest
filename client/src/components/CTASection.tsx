@@ -10,7 +10,7 @@ export default function CTASection() {
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold text-slate-900 mb-4">Ready to find fresh produce near you?</h2>
             <p className="text-lg text-slate-700 mb-6">Join our community of local growers and food enthusiasts. Whether you want to buy or sell, FarmDirect connects you with your neighbors.</p>
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-              <Link href="/auth" className="inline-flex justify-center items-center px-6 py-3 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-lg shadow-sm transition duration-150 ease-in-out">
+              <Link href="/clean-auth" className="inline-flex justify-center items-center px-6 py-3 bg-primary-400 hover:bg-primary-500 text-white font-medium rounded-lg shadow-sm transition duration-150 ease-in-out">
                 Sign Up Now
               </Link>
               <Link href="/listings" className="inline-flex justify-center items-center px-6 py-3 border border-primary-400 text-primary-500 hover:bg-primary-50 font-medium rounded-lg transition duration-150 ease-in-out">
