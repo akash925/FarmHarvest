@@ -31,10 +31,19 @@ app.use(express.urlencoded({ extended: false }));
 
 // Fix CORS for proper cookie handling
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
+  // Always allow same-origin and development origins
+  const allowedOrigins = [
+    'http://localhost:5000',
+    'http://127.0.0.1:5000',
+    'https://localhost:5000',
+    req.headers.origin
+  ];
+  
+  const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, '');
+  if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
+  
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -61,10 +70,11 @@ app.use(session({
   name: 'farmSessionId',
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days for better persistence
-    secure: false,
-    httpOnly: true, // Security best practice
+    secure: false, // Set to false for development
+    httpOnly: false, // Allow JavaScript access for debugging
     sameSite: 'lax',
-    path: '/'
+    path: '/',
+    domain: undefined // Let browser handle domain automatically
   }
 }));
 

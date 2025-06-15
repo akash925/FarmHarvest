@@ -52,14 +52,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('Checking auth status...');
       const response = await fetch('/api/auth/session', {
         credentials: 'include'
       });
       
+      console.log('Auth response status:', response.status);
+      console.log('Auth response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Auth success - user data:', data.user);
         setUser(data.user);
       } else {
+        const errorData = await response.json();
+        console.log('Auth failed - error:', errorData);
         setUser(null);
       }
     } catch (error) {
@@ -71,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
+    console.log('Attempting login...');
     const response = await fetch('/api/auth/signin', {
       method: 'POST',
       headers: {
@@ -80,13 +88,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
 
+    console.log('Login response status:', response.status);
+    console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('Login response cookies:', document.cookie);
+
     if (!response.ok) {
       const error = await response.json();
+      console.log('Login error:', error);
       throw new Error(error.message || 'Login failed');
     }
 
     const data = await response.json();
+    console.log('Login success - user data:', data.user);
     setUser(data.user);
+    
+    // Force a re-check of auth status after successful login
+    setTimeout(() => {
+      checkAuthStatus();
+    }, 100);
   };
 
   const signup = async (name: string, email: string, password: string, zip?: string) => {
