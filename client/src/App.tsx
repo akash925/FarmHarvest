@@ -21,6 +21,7 @@ import Messages from "@/pages/Messages";
 import AuthTest from "@/pages/AuthTest";
 import StableLogin from "@/pages/StableLogin";
 import ComprehensiveAuth from "@/pages/ComprehensiveAuth";
+import CleanAuth from "@/pages/CleanAuth";
 import MarketplaceMap from "@/pages/MarketplaceMap";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";

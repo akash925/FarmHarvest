@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import { pool } from "./db";
+import { configurePassport, setupAuthRoutes } from "./auth";
 
 // Extend express-session with our custom properties
 declare module 'express-session' {
@@ -67,6 +68,9 @@ app.use(session({
   }
 }));
 
+// Configure passport for authentication
+configurePassport();
+
 // Debug middleware for session tracking
 app.use((req, res, next) => {
   if (req.path.includes('/api/auth/')) {
@@ -106,6 +110,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup authentication routes
+  setupAuthRoutes(app);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
