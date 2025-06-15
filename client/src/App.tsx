@@ -20,6 +20,7 @@ import Signup from "@/pages/Signup";
 import Messages from "@/pages/Messages";
 import AuthTest from "@/pages/AuthTest";
 import StableLogin from "@/pages/StableLogin";
+import ComprehensiveAuth from "@/pages/ComprehensiveAuth";
 import MarketplaceMap from "@/pages/MarketplaceMap";
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
@@ -49,6 +50,7 @@ function App() {
             <Route path="/signup" component={Signup} />
         <Route path="/auth-test" component={AuthTest} />
         <Route path="/stable-login" component={StableLogin} />
+        <Route path="/comprehensive-auth" component={ComprehensiveAuth} />
             <Route path="/sell" component={Sell} />
             <Route path="/listings" component={Listings} />
             <Route path="/messages" component={Messages} />

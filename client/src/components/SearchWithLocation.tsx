@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Search } from 'lucide-react';
-import { useAuth } from '@/lib/simpleAuth';
+import { useAuth } from '@/lib/robustAuth';
 
 export default function SearchWithLocation() {
   const { user } = useAuth();
@@ -26,9 +26,9 @@ export default function SearchWithLocation() {
     refetch();
   };
 
-  const listings = searchResults?.listings || [];
-  const distantListings = searchResults?.distantListings || [];
-  const locationMessage = searchResults?.message;
+  const listings = (searchResults as any)?.listings || [];
+  const distantListings = (searchResults as any)?.distantListings || [];
+  const locationMessage = (searchResults as any)?.message;
 
   return (
     <div className="space-y-6">
