@@ -71,10 +71,13 @@ export default function UserProfile() {
     );
   }
 
-  const user: User | undefined = userData?.user;
-  const listings: Listing[] = listingsData?.listings || [];
-  const reviews: Review[] = reviewsData?.reviews || [];
-  const farmSpaces: any[] = farmSpacesData?.farmSpaces || [];
+  const user: User | undefined = (userData as any)?.user;
+  const listings: Listing[] = (listingsData as any)?.listings || [];
+  const reviews: Review[] = (reviewsData as any)?.reviews || [];
+  const farmSpaces: any[] = (farmSpacesData as any)?.farmSpaces || [];
+
+  // Calculate total listings count (products + farm spaces)
+  const totalListings = listings.length + farmSpaces.length;
 
   if (!user) {
     return (
@@ -172,7 +175,7 @@ export default function UserProfile() {
                   {/* Stats */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="text-center p-4 bg-white rounded-lg border">
-                      <div className="text-2xl font-bold text-blue-600">{listings.length}</div>
+                      <div className="text-2xl font-bold text-blue-600">{totalListings}</div>
                       <div className="text-sm text-gray-600">Active Listings</div>
                     </div>
                     <div className="text-center p-4 bg-white rounded-lg border">
@@ -221,7 +224,7 @@ export default function UserProfile() {
           {/* Tabs Content */}
           <Tabs defaultValue="listings" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="listings">Listings ({listings.length})</TabsTrigger>
+              <TabsTrigger value="listings">Listings ({totalListings})</TabsTrigger>
               <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
               <TabsTrigger value="about">About</TabsTrigger>
             </TabsList>

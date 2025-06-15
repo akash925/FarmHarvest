@@ -397,6 +397,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Farm spaces endpoints
   
+  // Get farm spaces by user
+  app.get("/api/farm-spaces/user/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get seller profile first
+      const sellerProfile = await storage.getSellerProfile(userId);
+      
+      if (!sellerProfile) {
+        return res.status(200).json({ farmSpaces: [] });
+      }
+      
+      const farmSpaces = await storage.getFarmSpacesByProfile(sellerProfile.id);
+      
+      return res.status(200).json({ farmSpaces });
+    } catch (error) {
+      console.error("Get user farm spaces error:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Get all available farm spaces
   app.get("/api/farm-spaces/available", async (req, res) => {
     try {
