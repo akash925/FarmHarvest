@@ -238,7 +238,7 @@ export default function UserProfile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {listings.length === 0 ? (
+                  {totalListings === 0 ? (
                     <div className="text-center py-12">
                       <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-600 mb-2">
@@ -254,33 +254,84 @@ export default function UserProfile() {
                       )}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {listings.map((listing: Listing) => (
-                        <Card key={listing.id} className="overflow-hidden">
-                          <div className="h-48 overflow-hidden">
-                            <img
-                              src={listing.imageUrl || "https://images.unsplash.com/photo-1553531384-cc64ac80f931"}
-                              alt={listing.title}
-                              className="w-full h-full object-cover"
-                            />
+                    <div className="space-y-8">
+                      {/* Product Listings */}
+                      {listings.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <Package className="h-5 w-5" />
+                            Products for Sale ({listings.length})
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {listings.map((listing: Listing) => (
+                              <Card key={listing.id} className="overflow-hidden">
+                                <div className="h-48 overflow-hidden">
+                                  <img
+                                    src={listing.imageUrl || "https://images.unsplash.com/photo-1553531384-cc64ac80f931"}
+                                    alt={listing.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <CardContent className="p-4">
+                                  <h3 className="font-semibold mb-2">{listing.title}</h3>
+                                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                    {listing.description}
+                                  </p>
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="text-lg font-bold text-green-600">
+                                        ${(listing.price / 100).toFixed(2)}
+                                      </span>
+                                      <span className="text-gray-500">/{listing.unit}</span>
+                                    </div>
+                                    <Badge variant="outline">{listing.category}</Badge>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
                           </div>
-                          <CardContent className="p-4">
-                            <h3 className="font-semibold mb-2">{listing.title}</h3>
-                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                              {listing.description}
-                            </p>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <span className="text-lg font-bold text-green-600">
-                                  ${listing.price}
-                                </span>
-                                <span className="text-gray-500">/{listing.unit}</span>
-                              </div>
-                              <Badge variant="outline">{listing.category}</Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                        </div>
+                      )}
+
+                      {/* Farm Spaces */}
+                      {farmSpaces.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <MapPin className="h-5 w-5" />
+                            Farm Spaces for Lease ({farmSpaces.length})
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {farmSpaces.map((space: any) => (
+                              <Card key={space.id} className="overflow-hidden">
+                                <div className="h-48 overflow-hidden">
+                                  <img
+                                    src={space.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef"}
+                                    alt={space.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <CardContent className="p-4">
+                                  <h3 className="font-semibold mb-2">{space.title}</h3>
+                                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                    {space.description}
+                                  </p>
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="text-lg font-bold text-blue-600">
+                                        ${(space.pricePerMonth / 100).toFixed(2)}
+                                      </span>
+                                      <span className="text-gray-500">/month</span>
+                                    </div>
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                      {space.sizeSqft} sq ft
+                                    </Badge>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
