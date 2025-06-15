@@ -29,25 +29,18 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Fix CORS for proper cookie handling
+// Simple CORS setup for same-origin requests
 app.use((req, res, next) => {
-  // Always allow same-origin and development origins
-  const allowedOrigins = [
-    'http://localhost:5000',
-    'http://127.0.0.1:5000',
-    'https://localhost:5000',
-    req.headers.origin
-  ];
-  
-  const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, '');
-  if (allowedOrigins.includes(origin)) {
+  // For same-origin requests (Vite dev server), no CORS headers needed
+  // Only add CORS headers for cross-origin requests
+  const origin = req.headers.origin;
+  if (origin && origin !== `http://localhost:5000`) {
     res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Expose-Headers', 'Set-Cookie');
   }
-  
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Expose-Headers', 'Set-Cookie');
   
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
@@ -56,25 +49,17 @@ app.use((req, res, next) => {
   }
 });
 
-// Set up session handling with stable configuration
+// Set up session handling - simplified for debugging
 app.use(session({
-  store: new PgSession({
-    pool,
-    tableName: 'user_sessions',
-    createTableIfMissing: true,
-  }),
   secret: 'farm-produce-marketplace-secret-key-2024',
-  resave: true, // Save session on every request to ensure persistence
-  saveUninitialized: true, // Create sessions for unauthenticated users
-  rolling: false,
+  resave: false,
+  saveUninitialized: true, // Create sessions to debug cookie issues
   name: 'farmSessionId',
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days for better persistence
-    secure: false, // Set to false for development
-    httpOnly: false, // Allow JavaScript access for debugging
-    sameSite: 'lax',
-    path: '/',
-    domain: undefined // Let browser handle domain automatically
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    secure: false,
+    httpOnly: false, // Allow JS access to debug
+    sameSite: 'lax'
   }
 }));
 

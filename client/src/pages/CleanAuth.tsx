@@ -15,7 +15,7 @@ export default function CleanAuth() {
   const [activeTab, setActiveTab] = useState('login');
   
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('john@farm.com');
+  const [loginEmail, setLoginEmail] = useState('test@example.com');
   const [loginPassword, setLoginPassword] = useState('password');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
