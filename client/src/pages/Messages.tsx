@@ -176,8 +176,8 @@ export default function Messages() {
     return null;
   }
 
-  const conversations: Conversation[] = messagesData?.conversations || [];
-  const messages: Message[] = conversationData?.messages || [];
+  const conversations: Conversation[] = (messagesData as any)?.conversations || [];
+  const messages: Message[] = (conversationData as any)?.messages || [];
   const selectedUser = conversations.find(c => c.userId === selectedConversation);
 
   return (
@@ -305,7 +305,7 @@ export default function Messages() {
                                   : 'bg-gray-100 text-gray-900'
                               }`}
                             >
-                              <p className="text-sm">{message.content}</p>
+                              <p className="text-sm">{message.message}</p>
                               <p
                                 className={`text-xs mt-1 ${
                                   message.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
