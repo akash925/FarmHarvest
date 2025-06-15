@@ -53,6 +53,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       console.log('Checking auth status...');
+      
+      // Check localStorage backup first
+      const storedUser = localStorage.getItem('farmUser');
+      const timestamp = localStorage.getItem('farmUserTimestamp');
+      
+      if (storedUser && timestamp) {
+        const userAge = Date.now() - parseInt(timestamp);
+        if (userAge < 24 * 60 * 60 * 1000) { // 24 hours
+          console.log('Using stored user data');
+          setUser(JSON.parse(storedUser));
+          setIsLoading(false);
+          return;
+        } else {
+          // Clear expired data
+          localStorage.removeItem('farmUser');
+          localStorage.removeItem('farmUserTimestamp');
+        }
+      }
+      
       const response = await fetch('/api/auth/session', {
         credentials: 'include'
       });
@@ -64,10 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         console.log('Auth success - user data:', data.user);
         setUser(data.user);
+        // Update localStorage
+        localStorage.setItem('farmUser', JSON.stringify(data.user));
+        localStorage.setItem('farmUserTimestamp', Date.now().toString());
       } else {
         const errorData = await response.json();
         console.log('Auth failed - error:', errorData);
         setUser(null);
+        // Clear localStorage on auth failure
+        localStorage.removeItem('farmUser');
+        localStorage.removeItem('farmUserTimestamp');
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -79,6 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     console.log('Attempting login...');
+    
+    // Force session creation first
+    await fetch('/api/auth/session', { credentials: 'include' });
+    
     const response = await fetch('/api/auth/signin', {
       method: 'POST',
       headers: {
@@ -90,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     console.log('Login response status:', response.status);
     console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
-    console.log('Login response cookies:', document.cookie);
+    console.log('Document cookies after login:', document.cookie);
 
     if (!response.ok) {
       const error = await response.json();
@@ -100,12 +129,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await response.json();
     console.log('Login success - user data:', data.user);
+    
+    // Store user data in localStorage as backup
+    localStorage.setItem('farmUser', JSON.stringify(data.user));
+    localStorage.setItem('farmUserTimestamp', Date.now().toString());
+    
     setUser(data.user);
     
-    // Force a re-check of auth status after successful login
-    setTimeout(() => {
-      checkAuthStatus();
-    }, 100);
+    // Force multiple re-checks to ensure session persists
+    setTimeout(() => checkAuthStatus(), 50);
+    setTimeout(() => checkAuthStatus(), 200);
+    setTimeout(() => checkAuthStatus(), 500);
   };
 
   const signup = async (name: string, email: string, password: string, zip?: string) => {
@@ -127,12 +161,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const logout = () => {
-    fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Clear user state and localStorage
     setUser(null);
+    localStorage.removeItem('farmUser');
+    localStorage.removeItem('farmUserTimestamp');
     window.location.href = '/';
   };
 

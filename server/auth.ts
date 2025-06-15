@@ -36,18 +36,17 @@ export function configurePassport() {
   ));
 
   // Facebook Strategy
-  if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
-    passport.use(new FacebookStrategy({
-      clientID: process.env.FACEBOOK_APP_ID,
-      clientSecret: process.env.FACEBOOK_APP_SECRET,
-      callbackURL: "/api/auth/facebook/callback",
-      profileFields: ['id', 'displayName', 'email', 'photos']
-    }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
-      try {
-        // Check if user exists with Facebook ID
-        let user = await storage.getUserByAuthId('facebook', profile.id);
-        
-        if (!user) {
+  passport.use(new FacebookStrategy({
+    clientID: process.env.FACEBOOK_APP_ID || 'facebook_app_id_placeholder',
+    clientSecret: process.env.FACEBOOK_APP_SECRET || 'facebook_secret_placeholder',
+    callbackURL: "/api/auth/facebook/callback",
+    profileFields: ['id', 'displayName', 'email', 'photos']
+  }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
+    try {
+      // Check if user exists with Facebook ID
+      let user = await storage.getUserByAuthId('facebook', profile.id);
+      
+      if (!user) {
           // Check if user exists with same email
           const email = profile.emails?.[0]?.value;
           if (email) {
@@ -81,12 +80,11 @@ export function configurePassport() {
   }
 
   // Instagram Strategy
-  if (process.env.INSTAGRAM_CLIENT_ID && process.env.INSTAGRAM_CLIENT_SECRET) {
-    passport.use(new InstagramStrategy({
-      clientID: process.env.INSTAGRAM_CLIENT_ID,
-      clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
-      callbackURL: "/api/auth/instagram/callback"
-    }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
+  passport.use(new InstagramStrategy({
+    clientID: process.env.INSTAGRAM_CLIENT_ID || 'instagram_client_id_placeholder',
+    clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || 'instagram_secret_placeholder',
+    callbackURL: "/api/auth/instagram/callback"
+  }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
       try {
         // Check if user exists with Instagram ID
         let user = await storage.getUserByAuthId('instagram', profile.id);
