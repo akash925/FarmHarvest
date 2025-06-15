@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { filterListingsByDistance } from "./utils/location";
 import Stripe from "stripe";
 import { z } from "zod";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import {
   insertListingSchema,
   insertOrderSchema,
@@ -22,6 +22,8 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 
 // Platform fee percentage (15%)
 const PLATFORM_FEE_PERCENT = 15;
+
+let wss: WebSocketServer;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe payment endpoint for creating payment intent
@@ -1205,10 +1207,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const message = await storage.createMessage({
         senderId: req.session.userId,
         recipientId: parseInt(recipientId),
-        content: content.trim(),
+        subject: `Message from ${req.session.userId}`,
+        message: content.trim(),
         farmSpaceId: farmSpaceId ? parseInt(farmSpaceId) : undefined,
-        isRead: false,
       });
+
+      // Broadcast message via WebSocket if available
+      if (wss) {
+        const messageData = {
+          type: 'message',
+          message,
+          senderId: req.session.userId,
+          recipientId: parseInt(recipientId)
+        };
+        
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(messageData));
+          }
+        });
+      }
 
       res.json({ message });
     } catch (error) {

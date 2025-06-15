@@ -26,7 +26,8 @@ interface Message {
   id: number;
   senderId: number;
   recipientId: number;
-  content: string;
+  message: string;
+  subject: string;
   farmSpaceId?: number;
   isRead: boolean;
   createdAt: string;
@@ -234,7 +235,7 @@ export default function Messages() {
                               </div>
                               {conversation.lastMessage && (
                                 <p className="text-sm text-gray-500 truncate">
-                                  {conversation.lastMessage.content}
+                                  {conversation.lastMessage.message}
                                 </p>
                               )}
                             </div>
