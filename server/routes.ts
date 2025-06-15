@@ -596,6 +596,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get("/api/listings/user/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const listings = await storage.getListingsByUser(userId);
+      
+      return res.status(200).json({ listings });
+    } catch (error) {
+      console.error("Get user listings error:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/listings/:id", async (req, res) => {
     try {
       const listingId = parseInt(req.params.id);
