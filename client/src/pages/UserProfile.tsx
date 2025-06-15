@@ -1,4 +1,4 @@
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import {
   Package, Users, Award, Shield, MessageCircle 
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
-import { useAuth } from "@/lib/simpleAuth";
+import { useAuth } from "@/lib/cleanAuth";
+import { useToast } from "@/hooks/use-toast";
 import TrustBadges from "@/components/TrustBadges";
 
 interface User {
@@ -44,8 +45,10 @@ interface Review {
 
 export default function UserProfile() {
   const { id } = useParams<{ id: string }>();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAuthenticated } = useAuth();
   const userId = parseInt(id || "1");
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
 
   const { data: userData, isLoading: userLoading } = useQuery({
     queryKey: [`/api/users/${userId}`],
@@ -78,6 +81,38 @@ export default function UserProfile() {
 
   // Calculate total listings count (products + farm spaces)
   const totalListings = listings.length + farmSpaces.length;
+
+  // Handler functions
+  const handleContact = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to contact this seller",
+        variant: "destructive",
+      });
+      navigate('/clean-auth');
+      return;
+    }
+    // Navigate to messages page with pre-filled recipient
+    navigate(`/messages?recipient=${userId}`);
+  };
+
+  const handleFollow = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required", 
+        description: "Please sign in to follow this seller",
+        variant: "destructive",
+      });
+      navigate('/clean-auth');
+      return;
+    }
+    
+    toast({
+      title: "Follow Feature",
+      description: "Follow functionality will be implemented soon!",
+    });
+  };
 
   if (!user) {
     return (
@@ -127,11 +162,20 @@ export default function UserProfile() {
                   
                   {!isOwnProfile && (
                     <div className="flex gap-2">
-                      <Button size="sm">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleContact()}
+                        disabled={!isAuthenticated}
+                      >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Contact
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleFollow()}
+                        disabled={!isAuthenticated}
+                      >
                         <Star className="h-4 w-4 mr-2" />
                         Follow
                       </Button>

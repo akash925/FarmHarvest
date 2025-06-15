@@ -1,303 +1,366 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Send, User, Clock } from "lucide-react";
-import { Helmet } from "react-helmet-async";
-import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/lib/simpleAuth";
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, useRoute } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Send, 
+  MessageCircle, 
+  User,
+  ArrowLeft,
+  Phone,
+  Video,
+  MoreVertical
+} from 'lucide-react';
+import { useAuth } from '@/lib/cleanAuth';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { Helmet } from 'react-helmet-async';
 
 interface Message {
   id: number;
   senderId: number;
   recipientId: number;
+  content: string;
   farmSpaceId?: number;
-  subject: string;
-  message: string;
   isRead: boolean;
   createdAt: string;
+  sender?: {
+    id: number;
+    name: string;
+    image?: string;
+  };
 }
 
 interface Conversation {
   userId: number;
   userName: string;
   userImage?: string;
-  lastMessage: string;
-  lastMessageTime: string;
+  lastMessage?: Message;
   unreadCount: number;
-  farmSpaceId?: number;
 }
 
 export default function Messages() {
-  const { user: currentUser } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
+  
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
-  const [newMessage, setNewMessage] = useState("");
+  const [newMessage, setNewMessage] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Connect to WebSocket for real-time messaging
+  // Get recipient from URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const recipientId = urlParams.get('recipient');
+
+  // Redirect if not authenticated
   useEffect(() => {
-    if (currentUser) {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      const socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        socket.send(JSON.stringify({ type: 'join', userId: currentUser.id }));
-        setWs(socket);
-      };
-
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'new_message') {
-          // Refresh messages when new message arrives
-          queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/messages/conversation'] });
-        }
-      };
-
-      return () => {
-        socket.close();
-      };
+    if (!isAuthenticated) {
+      navigate('/clean-auth');
+      return;
     }
-  }, [currentUser, queryClient]);
+  }, [isAuthenticated, navigate]);
 
-  // Fetch all messages for conversation list
-  const { data: messagesData } = useQuery({
+  // Get user messages
+  const { data: messagesData, refetch: refetchMessages } = useQuery({
     queryKey: ['/api/messages'],
-    enabled: !!currentUser
+    enabled: isAuthenticated,
   });
 
-  // Fetch conversation with selected user
+  // Get conversation messages
   const { data: conversationData } = useQuery({
-    queryKey: ['/api/messages/conversation', selectedConversation],
-    queryFn: async () => {
-      if (!selectedConversation) return null;
-      const response = await fetch(`/api/messages/conversation/${selectedConversation}`);
-      return response.json();
-    },
-    enabled: !!selectedConversation
+    queryKey: [`/api/messages/conversation/${selectedConversation}`],
+    enabled: selectedConversation !== null,
   });
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (messageData: { recipientId: number; subject: string; message: string; farmSpaceId?: number }) => {
-      return apiRequest("POST", "/api/messages", messageData);
+    mutationFn: async (messageData: { recipientId: number; content: string; farmSpaceId?: number }) => {
+      return apiRequest('POST', '/api/messages', messageData);
     },
     onSuccess: () => {
-      setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/messages/conversation', selectedConversation] });
-    }
+      setNewMessage('');
+      refetchMessages();
+      queryClient.invalidateQueries({ queryKey: [`/api/messages/conversation/${selectedConversation}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send message",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
-  // Group messages into conversations
-  const conversations: Conversation[] = [];
-  if (messagesData?.messages) {
-    const messageMap = new Map<number, Message[]>();
-    
-    messagesData.messages.forEach((message: Message) => {
-      const otherUserId = message.senderId === currentUser?.id ? message.recipientId : message.senderId;
-      if (!messageMap.has(otherUserId)) {
-        messageMap.set(otherUserId, []);
-      }
-      messageMap.get(otherUserId)!.push(message);
-    });
+  // WebSocket connection for real-time messages
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
 
-    messageMap.forEach((messages, userId) => {
-      const latestMessage = messages[0];
-      const unreadCount = messages.filter(m => !m.isRead && m.recipientId === currentUser?.id).length;
-      
-      conversations.push({
-        userId,
-        userName: `User ${userId}`, // This would be fetched from user data
-        lastMessage: latestMessage.message,
-        lastMessageTime: new Date(latestMessage.createdAt).toLocaleDateString(),
-        unreadCount,
-        farmSpaceId: latestMessage.farmSpaceId
-      });
-    });
-  }
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+      // Join user room
+      socket.send(JSON.stringify({
+        type: 'join',
+        userId: user.id
+      }));
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'message') {
+        // Refresh messages when new message received
+        refetchMessages();
+        if (selectedConversation === data.senderId || selectedConversation === data.recipientId) {
+          queryClient.invalidateQueries({ queryKey: [`/api/messages/conversation/${selectedConversation}`] });
+        }
+      }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
+
+    setWs(socket);
+
+    return () => {
+      socket.close();
+    };
+  }, [isAuthenticated, user, refetchMessages, queryClient, selectedConversation]);
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversationData]);
+
+  // Set initial conversation if recipient specified in URL
+  useEffect(() => {
+    if (recipientId && !selectedConversation) {
+      setSelectedConversation(parseInt(recipientId));
+    }
+  }, [recipientId, selectedConversation]);
 
   const handleSendMessage = () => {
-    if (!selectedConversation || !newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedConversation) return;
 
     sendMessageMutation.mutate({
       recipientId: selectedConversation,
-      subject: "Property Inquiry",
-      message: newMessage
+      content: newMessage.trim(),
     });
   };
 
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="p-8 text-center">
-            <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">
-              Sign in to view messages
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Connect with property owners and buyers through secure messaging
-            </p>
-            <Button onClick={() => window.location.href = '/auth'}>
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  const formatMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  if (!isAuthenticated) {
+    return null;
   }
 
+  const conversations: Conversation[] = messagesData?.conversations || [];
+  const messages: Message[] = conversationData?.messages || [];
+  const selectedUser = conversations.find(c => c.userId === selectedConversation);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       <Helmet>
         <title>Messages - FarmDirect</title>
-        <meta name="description" content="Secure messaging with property owners and buyers on FarmDirect marketplace." />
       </Helmet>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Messages</h1>
-            <p className="text-gray-600">Connect with property owners and buyers</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-8rem)]">
+            
             {/* Conversations List */}
             <Card className="lg:col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageCircle className="h-5 w-5" />
-                  Conversations
+                  Messages
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {conversations.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No conversations yet</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      Start a conversation by contacting a property owner
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {conversations.map((conversation) => (
-                      <div
-                        key={conversation.userId}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                          selectedConversation === conversation.userId
-                            ? 'bg-blue-50 border-blue-200 border'
-                            : 'hover:bg-gray-50'
-                        }`}
-                        onClick={() => setSelectedConversation(conversation.userId)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={conversation.userImage} />
-                            <AvatarFallback>
-                              <User className="h-4 w-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-gray-900 truncate">
-                                {conversation.userName}
-                              </p>
-                              {conversation.unreadCount > 0 && (
-                                <Badge variant="destructive" className="text-xs">
-                                  {conversation.unreadCount}
-                                </Badge>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[calc(100vh-12rem)]">
+                  {conversations.length === 0 ? (
+                    <div className="p-6 text-center">
+                      <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No conversations yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {conversations.map((conversation) => (
+                        <div
+                          key={conversation.userId}
+                          className={`p-4 cursor-pointer hover:bg-gray-50 border-b transition-colors ${
+                            selectedConversation === conversation.userId ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                          }`}
+                          onClick={() => setSelectedConversation(conversation.userId)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={conversation.userImage} />
+                              <AvatarFallback>
+                                {conversation.userName?.charAt(0) || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <p className="font-medium text-gray-900 truncate">
+                                  {conversation.userName}
+                                </p>
+                                {conversation.unreadCount > 0 && (
+                                  <Badge variant="default" className="ml-2">
+                                    {conversation.unreadCount}
+                                  </Badge>
+                                )}
+                              </div>
+                              {conversation.lastMessage && (
+                                <p className="text-sm text-gray-500 truncate">
+                                  {conversation.lastMessage.content}
+                                </p>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600 truncate">
-                              {conversation.lastMessage}
-                            </p>
-                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                              <Clock className="h-3 w-3" />
-                              {conversation.lastMessageTime}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Message Thread */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>
-                  {selectedConversation ? `Conversation with User ${selectedConversation}` : 'Select a conversation'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedConversation ? (
-                  <div className="space-y-4">
-                    {/* Messages */}
-                    <div className="h-96 overflow-y-auto border rounded-lg p-4 space-y-4">
-                      {conversationData?.conversation?.map((message: Message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${
-                            message.senderId === currentUser.id ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              message.senderId === currentUser.id
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 text-gray-900'
-                            }`}
-                          >
-                            <p className="text-sm">{message.message}</p>
-                            <p className={`text-xs mt-1 ${
-                              message.senderId === currentUser.id ? 'text-blue-100' : 'text-gray-500'
-                            }`}>
-                              {new Date(message.createdAt).toLocaleTimeString()}
-                            </p>
                           </div>
                         </div>
                       ))}
                     </div>
-
-                    {/* Send Message */}
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type your message..."
-                        className="flex-1"
-                        rows={2}
-                      />
-                      <Button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                        className="self-end"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Select a conversation to start messaging</p>
-                  </div>
-                )}
+                  )}
+                </ScrollArea>
               </CardContent>
+            </Card>
+
+            {/* Message Thread */}
+            <Card className="lg:col-span-3">
+              {selectedConversation ? (
+                <>
+                  {/* Chat Header */}
+                  <CardHeader className="border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="lg:hidden"
+                          onClick={() => setSelectedConversation(null)}
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={selectedUser?.userImage} />
+                          <AvatarFallback>
+                            {selectedUser?.userName?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{selectedUser?.userName}</p>
+                          <p className="text-sm text-gray-500">Usually responds in 2 hours</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Phone className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Video className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  {/* Messages */}
+                  <CardContent className="p-0 flex flex-col h-[calc(100vh-16rem)]">
+                    <ScrollArea className="flex-1 p-4">
+                      <div className="space-y-4">
+                        {messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                message.senderId === user?.id
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-100 text-gray-900'
+                              }`}
+                            >
+                              <p className="text-sm">{message.content}</p>
+                              <p
+                                className={`text-xs mt-1 ${
+                                  message.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
+                                }`}
+                              >
+                                {formatMessageTime(message.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    </ScrollArea>
+
+                    {/* Message Input */}
+                    <div className="border-t p-4">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Type your message..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage();
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={handleSendMessage}
+                          disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </>
+              ) : (
+                <CardContent className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                      Select a conversation
+                    </h3>
+                    <p className="text-gray-500">
+                      Choose a conversation from the list to start messaging
+                    </p>
+                  </div>
+                </CardContent>
+              )}
             </Card>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
