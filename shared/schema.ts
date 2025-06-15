@@ -7,12 +7,13 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name"),
   email: text("email").notNull().unique(),
+  password: text("password"), // For local authentication
   emailVerified: timestamp("email_verified"),
   image: text("image"),
   zip: text("zip"),
   about: text("about"),
   productsGrown: text("products_grown"),
-  authType: text("auth_type").notNull(), // "google", "facebook", etc.
+  authType: text("auth_type").notNull(), // "email", "facebook", "instagram", etc.
   authId: text("auth_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });

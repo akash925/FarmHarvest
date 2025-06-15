@@ -1,0 +1,26 @@
+12:00:29 AM [express] GET /api/reviews/seller/1 200 in 75ms :: {"reviews":[]}
+12:00:29 AM [express] GET /api/reviews/seller/2 200 in 80ms :: {"reviews":[]}
+12:00:29 AM [express] GET /api/reviews/seller/3 200 in 83ms :: {"reviews":[]}
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH, User ID: undefined
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH User ID: undefined
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH, User ID: undefined
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH User ID: undefined
+12:00:30 AM [express] GET /api/auth/session 401 in 38ms :: {"message":"Not authenticated"}
+12:00:30 AM [express] GET /api/auth/session 401 in 37ms :: {"message":"Not authenticated"}
+12:00:30 AM [express] GET /api/listings/featured 304 in 77ms :: {"listings":[{"id":6,"title":"Fresh O…
+12:00:30 AM [express] GET /api/sellers/top 304 in 115ms :: {"sellers":[{"id":1,"name":"Test User","em…
+12:00:30 AM [express] GET /api/users/3 304 in 71ms :: {"user":{"id":3,"name":"Akash","email":"akash.a…
+12:00:30 AM [express] GET /api/users/1 304 in 75ms :: {"user":{"id":1,"name":"Test User","email":"tes…
+12:00:30 AM [express] GET /api/users/2 304 in 74ms :: {"user":{"id":2,"name":"Akash","email":"akash@a…
+12:00:30 AM [express] GET /api/reviews/seller/1 304 in 75ms :: {"reviews":[]}
+12:00:30 AM [express] GET /api/reviews/seller/3 304 in 78ms :: {"reviews":[]}
+12:00:30 AM [express] GET /api/reviews/seller/2 304 in 75ms :: {"reviews":[]}
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH, User ID: undefined
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH User ID: undefined
+12:01:00 AM [express] GET /api/auth/session 401 in 39ms :: {"message":"Not authenticated"}
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH, User ID: undefined
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH User ID: undefined
+12:01:30 AM [express] GET /api/auth/session 401 in 38ms :: {"message":"Not authenticated"}
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH, User ID: undefined
+[GET] /api/auth/session - Session ID: TBtfhZ4lX0y-14WpasyTYvngFptOl-yH User ID: undefined
+12:02:00 AM [express] GET /api/auth/session 401 in 38ms :: {"message":"Not authenticated"}
