@@ -32,10 +32,8 @@ import {
 
 // Make sure to call loadStripe outside of a component's render to avoid
 // recreating the Stripe object on every render.
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+const stripePromise = STRIPE_PUBLIC_KEY ? loadStripe(STRIPE_PUBLIC_KEY) : null;
 
 // Payment form component using Stripe Elements
 function CheckoutForm({ amount, listingId, quantity }: { 
@@ -144,6 +142,25 @@ export default function Checkout() {
   if (!isAuthenticated) {
     navigate('/auth');
     return null;
+  }
+  
+  // Check if Stripe is configured
+  if (!STRIPE_PUBLIC_KEY) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center">
+          <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment System Not Configured</h1>
+          <p className="text-slate-600 mb-6">
+            Online payments are currently unavailable. Please contact the seller directly to arrange payment.
+          </p>
+          <Button onClick={() => navigate('/listings')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Listings
+          </Button>
+        </div>
+      </div>
+    );
   }
   
   // Fetch listing details

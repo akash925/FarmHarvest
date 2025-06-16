@@ -24,15 +24,15 @@ const configSchema = z.object({
   
   // App
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default(5000),
+  PORT: z.string().default('5000').transform(Number),
   
   // File upload
-  MAX_FILE_SIZE: z.string().transform(Number).default(10485760), // 10MB
+  MAX_FILE_SIZE: z.string().default('10485760').transform(Number), // 10MB
   ALLOWED_FILE_TYPES: z.string().default('image/jpeg,image/png,image/webp,video/mp4'),
   
   // Rate limiting
-  RATE_LIMIT_WINDOW: z.string().transform(Number).default(900000), // 15 minutes
-  RATE_LIMIT_MAX: z.string().transform(Number).default(100),
+  RATE_LIMIT_WINDOW: z.string().default('900000').transform(Number), // 15 minutes
+  RATE_LIMIT_MAX: z.string().default('100').transform(Number),
 });
 
 // Parse and validate environment variables
@@ -70,4 +70,7 @@ export const features = {
   instagramAuth: !!(config.INSTAGRAM_CLIENT_ID && config.INSTAGRAM_CLIENT_SECRET),
   emailNotifications: !!config.SENDGRID_API_KEY,
   stripePayments: !!(config.STRIPE_SECRET_KEY && config.STRIPE_PUBLISHABLE_KEY),
-}; 
+};
+
+// Additional feature flags
+export const ENABLE_PAYMENTS = !!process.env.STRIPE_SECRET_KEY; 

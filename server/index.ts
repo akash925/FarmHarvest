@@ -130,12 +130,8 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
     // Start server
     const port = config.PORT;
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`🚀 FarmDirect server running on port ${port} in ${config.NODE_ENV} mode`);
+    server.listen(port, () => {
+      log(`🚀 FarmDirect server running on http://localhost:${port} in ${config.NODE_ENV} mode`);
       log(`🔐 Authentication: Local${config.FACEBOOK_APP_ID ? ', Facebook' : ''}${config.INSTAGRAM_CLIENT_ID ? ', Instagram' : ''}`);
       log(`💾 Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}`);
     });

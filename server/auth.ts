@@ -291,25 +291,26 @@ export function setupAuthRoutes(app: Express) {
     }
   });
 
-  app.get('/api/auth/session', (req, res) => {
-    if (req.isAuthenticated() && req.user) {
-      const user = req.user as any;
-      res.json({ 
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          zip: user.zip,
-          about: user.about,
-          productsGrown: user.productsGrown,
-          authType: user.authType
-        }
-      });
-    } else {
-      res.status(401).json({ message: 'Not authenticated' });
-    }
-  });
+  // DISABLED: Duplicate session handler - using unified handler in routes.ts instead
+  // app.get('/api/auth/session', (req, res) => {
+  //   if (req.isAuthenticated() && req.user) {
+  //     const user = req.user as any;
+  //     res.json({ 
+  //       user: {
+  //         id: user.id,
+  //         name: user.name,
+  //         email: user.email,
+  //         image: user.image,
+  //         zip: user.zip,
+  //         about: user.about,
+  //         productsGrown: user.productsGrown,
+  //         authType: user.authType
+  //       }
+  //     });
+  //   } else {
+  //     res.status(401).json({ message: 'Not authenticated' });
+  //   }
+  // });
 
   app.post('/api/auth/logout', (req, res) => {
     req.logout((err) => {

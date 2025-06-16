@@ -30,17 +30,20 @@ export default function Login() {
     }
   });
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated or after successful login
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isSigningIn) {
+      console.log('User is authenticated, redirecting...');
       navigate("/");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isSigningIn, navigate]);
 
   const onSubmit = async (data: LoginForm) => {
     try {
+      console.log('Starting login process...');
       await signIn(data);
-      navigate("/");
+      console.log('Login API call completed');
+      // Navigation will be handled by the useEffect when auth state updates
     } catch (error) {
       // Error is handled by the hook and available in signInError
       console.error("Login failed:", error);

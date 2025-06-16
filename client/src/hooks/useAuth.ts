@@ -12,6 +12,22 @@ export interface User {
   authType: string;
 }
 
+export interface SellerProfile {
+  id: number;
+  userId: number;
+  businessName: string;
+  description?: string;
+  website?: string;
+  phone?: string;
+  address?: string;
+  operatingHours?: string;
+  certifications?: string;
+  productsGrown?: string;
+  isVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface SignUpData {
   name: string;
   email: string;
@@ -26,6 +42,7 @@ interface SignInData {
 
 interface AuthResponse {
   user: User;
+  sellerProfile?: SellerProfile | null;
 }
 
 // API functions
@@ -103,18 +120,33 @@ export function useAuth() {
     isLoading: isSessionLoading,
     error: sessionError,
   } = useQuery({
-    queryKey: ['auth', 'session'],
-    queryFn: authAPI.getSession,
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ['session'],
+    queryFn: async () => {
+      console.log('Fetching session...');
+      const result = await authAPI.getSession();
+      console.log('Session fetch result:', result);
+      return result;
+    },
+    retry: (failureCount, error) => {
+      // Don't retry on 401 (not authenticated)
+      if (error && (error as any).message?.includes('401')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced from 5 minutes for better debugging)
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Sign in mutation
   const signInMutation = useMutation({
     mutationFn: authAPI.signIn,
-    onSuccess: (data) => {
-      // Update the session cache
-      queryClient.setQueryData(['auth', 'session'], data);
+    onSuccess: async (data) => {
+      console.log('Sign in successful, updating session cache:', data);
+      // Update the session cache immediately
+      queryClient.setQueryData(['session'], data);
+      // Also invalidate to trigger a fresh fetch
+      await queryClient.invalidateQueries({ queryKey: ['session'] });
     },
     onError: (error) => {
       console.error('Sign in error:', error);
@@ -124,9 +156,12 @@ export function useAuth() {
   // Sign up mutation
   const signUpMutation = useMutation({
     mutationFn: authAPI.signUp,
-    onSuccess: (data) => {
-      // Update the session cache
-      queryClient.setQueryData(['auth', 'session'], data);
+    onSuccess: async (data) => {
+      console.log('Sign up successful, updating session cache:', data);
+      // Update the session cache immediately
+      queryClient.setQueryData(['session'], data);
+      // Also invalidate to trigger a fresh fetch
+      await queryClient.invalidateQueries({ queryKey: ['session'] });
     },
     onError: (error) => {
       console.error('Sign up error:', error);
@@ -136,11 +171,12 @@ export function useAuth() {
   // Sign out mutation
   const signOutMutation = useMutation({
     mutationFn: authAPI.signOut,
-    onSuccess: () => {
+    onSuccess: async () => {
+      console.log('Sign out successful, clearing session');
       // Clear the session cache
-      queryClient.setQueryData(['auth', 'session'], null);
-      // Optionally clear all query caches
-      queryClient.clear();
+      queryClient.setQueryData(['session'], null);
+      // Invalidate to ensure clean state
+      await queryClient.invalidateQueries({ queryKey: ['session'] });
     },
     onError: (error) => {
       console.error('Sign out error:', error);
@@ -148,12 +184,14 @@ export function useAuth() {
   });
 
   const user = session?.user || null;
+  const sellerProfile = session?.sellerProfile || null;
   const isAuthenticated = !!user;
   const isLoading = isSessionLoading || signInMutation.isPending || signUpMutation.isPending || signOutMutation.isPending;
 
   return {
     // User state
     user,
+    sellerProfile,
     isAuthenticated,
     isLoading,
     sessionError,

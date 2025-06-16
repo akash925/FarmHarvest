@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useAuth } from '@/lib/cleanAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -16,35 +16,18 @@ import { Search, Menu, X } from 'lucide-react';
 export default function Navbar() {
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
-  const [hasSellerProfile, setHasSellerProfile] = useState(false);
-  
-  // Check seller profile when user changes
-  useEffect(() => {
-    if (user) {
-      const checkSellerProfile = async () => {
-        try {
-          const profileRes = await fetch(`/api/seller-profiles/${user.id}`);
-          if (profileRes.ok) {
-            const profileData = await profileRes.json();
-            setHasSellerProfile(!!profileData?.profile);
-          }
-        } catch (e) {
-          setHasSellerProfile(false);
-        }
-      };
-      checkSellerProfile();
-    } else {
-      setHasSellerProfile(false);
-    }
-  }, [user]);
+  const { user, sellerProfile, isAuthenticated, signOut } = useAuth();
   
 
   
 
   
   const handleSignOut = async () => {
-    logout();
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -69,7 +52,7 @@ export default function Navbar() {
             <Link href="/farm-spaces" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Lease
             </Link>
-            <Link href="/marketplace-map" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
+            <Link href="/map" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
               Map
             </Link>
             <Link href="/sell" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
@@ -90,12 +73,15 @@ export default function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href={`/users/${user?.id}`}>Profile</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/seller-profile/${user?.id}`}>Farmer Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/seller-profile-setup">Setup Farm Profile</Link>
-                  </DropdownMenuItem>
+                  {sellerProfile ? (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/seller-profile/${user?.id}`}>Farmer Profile</Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link href="/seller-profile-setup">Setup Farm Profile</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/profile/edit">Settings</Link>
                   </DropdownMenuItem>
@@ -110,10 +96,10 @@ export default function Navbar() {
               </DropdownMenu>
             ) : (
               <>
-                <Link href="/clean-auth" className="text-primary-600 hover:text-primary-800 px-3 py-2 rounded-md text-sm font-medium">
+                <Link href="/login" className="text-primary-600 hover:text-primary-800 px-3 py-2 rounded-md text-sm font-medium">
                   Sign In
                 </Link>
-                <Link href="/clean-auth" className="btn-primary">
+                <Link href="/signup" className="btn-primary">
                   Get Started
                 </Link>
               </>
@@ -157,7 +143,7 @@ export default function Navbar() {
               Lease
             </Link>
             <Link 
-              href="/listings/new" 
+              href="/sell" 
               className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -173,20 +159,23 @@ export default function Navbar() {
                 >
                   Profile
                 </Link>
-                <Link 
-                  href={`/seller-profile/${user?.id}`}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Farmer Profile
-                </Link>
-                <Link 
-                  href="/seller-profile-setup"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Setup Farm Profile
-                </Link>
+                {sellerProfile ? (
+                  <Link 
+                    href={`/seller-profile/${user?.id}`}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Farmer Profile
+                  </Link>
+                ) : (
+                  <Link 
+                    href="/seller-profile-setup"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Setup Farm Profile
+                  </Link>
+                )}
                 <Link 
                   href="/profile/edit" 
                   className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -214,14 +203,14 @@ export default function Navbar() {
             ) : (
               <>
                 <Link 
-                  href="/clean-auth" 
+                  href="/login" 
                   className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-slate-100"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Sign In
                 </Link>
                 <Link 
-                  href="/clean-auth" 
+                  href="/signup" 
                   className="block px-3 py-2 rounded-md text-base font-medium bg-primary-400 text-white hover:bg-primary-500 mt-1"
                   onClick={() => setMobileMenuOpen(false)}
                 >

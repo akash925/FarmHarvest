@@ -44,14 +44,26 @@ export default function Signup() {
 
   const onSubmit = async (data: SignupForm) => {
     try {
+      console.log('Starting signup process...');
       await signUp(data);
-      setSuccess(true);
-      setTimeout(() => navigate("/"), 2000);
+      console.log('Signup API call completed');
+      
+      // Don't set success immediately, wait for auth state to update
+      // The useEffect below will handle redirecting when isAuthenticated becomes true
     } catch (error) {
       // Error is handled by the hook and available in signUpError
       console.error("Signup failed:", error);
     }
   };
+
+  // Redirect when successfully authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isSigningUp) {
+      console.log('User is now authenticated, redirecting...');
+      setSuccess(true);
+      setTimeout(() => navigate("/"), 1500);
+    }
+  }, [isAuthenticated, isSigningUp, navigate]);
 
   if (success) {
     return (

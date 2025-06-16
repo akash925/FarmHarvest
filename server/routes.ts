@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { filterListingsByDistance } from "./utils/location";
-import Stripe from "stripe";
+import { ENABLE_PAYMENTS } from "./config";
 import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 import {
@@ -13,12 +13,21 @@ import {
   insertMessageSchema
 } from "@shared/schema";
 
-// Get Stripe secret key from environment
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.warn("Missing STRIPE_SECRET_KEY. Stripe payments won't work.");
-}
+// Conditionally import and initialize Stripe
+let Stripe: any = null;
+let stripe: any = null;
 
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+if (ENABLE_PAYMENTS) {
+  try {
+    Stripe = require('stripe');
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    console.log('Stripe initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Stripe:', error);
+  }
+} else {
+  console.log('Stripe payments disabled - STRIPE_SECRET_KEY not provided');
+}
 
 // Platform fee percentage (15%)
 const PLATFORM_FEE_PERCENT = 15;
@@ -29,8 +38,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe payment endpoint for creating payment intent
   app.post("/api/create-payment-intent", async (req, res) => {
     try {
-      if (!stripe) {
-        return res.status(500).json({ message: "Stripe is not configured." });
+      if (!ENABLE_PAYMENTS || !stripe) {
+        return res.status(501).json({ message: "Payments are not enabled on this server." });
       }
 
       const { listingId, quantity, amount } = req.body;
@@ -129,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Session check endpoint
+  // Session check endpoint - unified handler with seller profile data
   app.get("/api/auth/session", async (req, res) => {
     try {
       console.log("[GET] /api/auth/session - Session ID:", req.sessionID, "User ID:", req.session?.userId);
@@ -144,9 +153,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.destroy(() => {});
         return res.status(401).json({ message: "User not found" });
       }
+
+      // Attach seller profile if exists to avoid extra frontend call
+      const sellerProfile = await storage.getSellerProfile(req.session.userId);
       
       console.log("Session check successful for user:", user.name);
-      return res.status(200).json({ user });
+      return res.status(200).json({ 
+        user,
+        sellerProfile: sellerProfile || null
+      });
     } catch (error) {
       console.error("Session error:", error);
       return res.status(500).json({ message: "Server error" });
@@ -318,16 +333,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
+      // Check if user exists first
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const profile = await storage.getSellerProfile(userId);
       
+      // Return 200 with null profile if profile doesn't exist (instead of 404)
       if (!profile) {
-        return res.status(404).json({ message: "Seller profile not found" });
+        return res.status(200).json({ 
+          profile: null,
+          media: [],
+          farmSpaces: [],
+          user,
+          listings: []
+        });
       }
       
       // Get related data for a complete profile
       const media = await storage.getProfileMedia(profile.id);
       const farmSpaces = await storage.getFarmSpacesByProfile(profile.id);
-      const user = await storage.getUserById(userId);
       const listings = await storage.getListingsByUser(userId);
       
       res.json({
@@ -586,6 +613,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { query, category, zip, userZip } = req.query;
       
+      // Validate query parameters
+      if (zip && typeof zip === 'string' && !/^\d{5}(-\d{4})?$/.test(zip)) {
+        return res.status(400).json({ message: "Invalid ZIP code format" });
+      }
+      
       const listings = await storage.searchListings(
         query as string || "",
         category as string,
@@ -597,18 +629,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { nearby, distant } = filterListingsByDistance(listings, userZip, 25);
         
         return res.status(200).json({ 
-          listings: nearby,
-          distantListings: distant,
+          listings: nearby || [],
+          distantListings: distant || [],
           message: nearby.length === 0 && distant.length > 0 
             ? "None in your current area, but here are some a bit further away."
             : undefined
         });
       }
       
-      return res.status(200).json({ listings });
+      // Always return an array, even if empty
+      return res.status(200).json({ listings: listings || [] });
     } catch (error) {
       console.error("Get listings error:", error);
-      return res.status(500).json({ message: "Server error" });
+      return res.status(500).json({ message: "Failed to fetch listings" });
     }
   });
   

@@ -1,22 +1,51 @@
 // client/src/pages/Sell.tsx
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/lib/simpleAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Helmet } from "react-helmet-async";
 import { Package, Truck, DollarSign, Users } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const quickListingSchema = z.object({
+  title: z.string().min(2, "Title must be at least 2 characters"),
+  price: z.string().min(1, "Price is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+  unit: z.string().min(1, "Unit is required"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+});
+
+type QuickListingForm = z.infer<typeof quickListingSchema>;
 
 export default function Sell() {
-  const auth = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [_, setLocation] = useLocation();
   const [hasFarm, setHasFarm] = useState<boolean | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const form = useForm<QuickListingForm>({
+    resolver: zodResolver(quickListingSchema),
+    defaultValues: {
+      title: "",
+      price: "",
+      quantity: "",
+      unit: "",
+      description: "",
+    }
+  });
 
   // 1) Show loading spinner while checking session
-  if (auth.isInitializing) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -26,23 +55,23 @@ export default function Sell() {
 
   // 2) Redirect to /login if not authenticated
   useEffect(() => {
-    if (!auth.isAuthenticated) {
+    if (!isAuthenticated) {
       setLocation("/login");
     }
-  }, [auth.isAuthenticated, setLocation]);
+  }, [isAuthenticated, setLocation]);
 
-  if (!auth.isAuthenticated) {
+  if (!isAuthenticated) {
     // while redirecting, render nothing
     return null;
   }
 
   // 3) Once authenticated, check if user has a seller profile
   useEffect(() => {
-    if (!auth.user) return;
+    if (!user) return;
     
     (async () => {
       try {
-        const res = await fetch(`/api/seller-profiles/${auth.user!.id}`, {
+        const res = await fetch(`/api/seller-profiles/${user.id}`, {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -59,7 +88,7 @@ export default function Sell() {
         setHasFarm(false);
       }
     })();
-  }, [auth.user]);
+  }, [user]);
 
   // 4) While we don't yet know if they have a seller profile, show spinner
   if (hasFarm === null) {
@@ -104,6 +133,46 @@ export default function Sell() {
     );
   }
 
+  const onSubmit = async (data: QuickListingForm) => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+
+    try {
+      const listingData = {
+        title: data.title,
+        description: data.description,
+        price: Math.round(parseFloat(data.price) * 100), // Convert to cents
+        quantity: parseInt(data.quantity),
+        unit: data.unit,
+        category: "produce", // default category
+      };
+
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(listingData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create listing');
+      }
+
+      setSubmitSuccess(true);
+      form.reset();
+      setTimeout(() => setSubmitSuccess(false), 3000);
+    } catch (error) {
+      console.error('Create listing error:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to create listing');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 6) Authenticated + has farm → render the Sell form
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
@@ -114,7 +183,7 @@ export default function Sell() {
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-center">Welcome Back, {auth.user?.name}!</h1>
+          <h1 className="text-3xl font-bold mb-8 text-center">Welcome Back, {user?.name}!</h1>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card>
@@ -150,8 +219,8 @@ export default function Sell() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">Update your farm information</p>
-                <Button variant="outline" onClick={() => setLocation("/profile")} className="w-full">
-                  Edit Profile
+                <Button variant="outline" onClick={() => setLocation(`/seller-profile/${user?.id}`)} className="w-full">
+                  View Profile
                 </Button>
               </CardContent>
             </Card>
@@ -202,29 +271,95 @@ export default function Sell() {
               <CardTitle>Quick Listing Form</CardTitle>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="itemName">Item Name</Label>
-                    <Input id="itemName" placeholder="Tomatoes, Apples, Eggs…" />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Item Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Tomatoes, Apples, Eggs…" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price per Unit ($)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" step="0.01" placeholder="e.g. 2.50" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                  <div>
-                    <Label htmlFor="price">Price per Unit</Label>
-                    <Input id="price" type="number" placeholder="e.g. 2.50" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity Available</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="e.g. 50" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="unit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Unit Type</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="lbs, pieces, bunches" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="quantity">Quantity Available</Label>
-                    <Input id="quantity" type="number" placeholder="e.g. 50" />
-                  </div>
-                  <div>
-                    <Label htmlFor="unit">Unit Type</Label>
-                    <Input id="unit" placeholder="lbs, pieces, bunches" />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full">Publish Listing</Button>
-              </form>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Describe your produce..." />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {submitError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{submitError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {submitSuccess && (
+                    <Alert>
+                      <AlertDescription>✅ Listing created successfully!</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Creating Listing..." : "Publish Listing"}
+                  </Button>
+                </form>
+              </Form>
             </CardContent>
           </Card>
         </div>
