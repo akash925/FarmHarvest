@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuth } from "@/lib/simpleAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 
@@ -19,34 +20,35 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { signIn } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { signIn, signInError, isSigningIn, isAuthenticated } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "john@farm.com",
-      password: "password"
+      password: "password123"
     }
   });
 
-  const onSubmit = async (data: LoginForm) => {
-    setIsLoading(true);
-    setError("");
-    
-    try {
-      await signIn(data.email, data.password);
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
       navigate("/");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    } finally {
-      setIsLoading(false);
+    }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = async (data: LoginForm) => {
+    try {
+      await signIn(data);
+      navigate("/");
+    } catch (error) {
+      // Error is handled by the hook and available in signInError
+      console.error("Login failed:", error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <Helmet>
         <title>Sign In - FarmDirect</title>
         <meta name="description" content="Sign in to your FarmDirect account to connect with local farmers and access fresh produce." />
@@ -90,22 +92,38 @@ export default function Login() {
                 )}
               />
 
-              {error && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-                  {error}
-                </div>
+              {signInError && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {signInError.message || "Sign in failed. Please try again."}
+                  </AlertDescription>
+                </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+              <Button type="submit" className="w-full" disabled={isSigningIn}>
+                {isSigningIn ? "Signing in..." : "Sign In"}
               </Button>
             </form>
           </Form>
           
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Demo credentials are pre-filled for testing
-            </p>
+          <div className="mt-6 space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <button 
+                  onClick={() => navigate("/signup")}
+                  className="text-green-600 hover:text-green-500 font-medium"
+                >
+                  Sign up
+                </button>
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                Demo credentials are pre-filled for testing
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

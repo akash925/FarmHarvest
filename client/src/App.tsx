@@ -1,67 +1,93 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+
+// Main pages
 import Home from "@/pages/Home";
+import NotFound from "@/pages/not-found";
+
+// Product/Listing pages
 import AllListings from "@/pages/AllListings";
 import ListingDetail from "@/pages/ListingDetail";
 import CreateListing from "@/pages/CreateListing";
+import Listings from "@/pages/Listings";
+
+// User pages
 import UserProfile from "@/pages/UserProfile";
 import EditProfile from "@/pages/EditProfile";
-import Checkout from "@/pages/Checkout";
 import MyOrders from "@/pages/MyOrders";
-import Auth from "@/pages/SimpleLogin";
-import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
-import SellerProfileSetup from "@/pages/SellerProfileSetup";
-import Sell from "@/pages/Sell";
-import Listings from "@/pages/Listings";
+
+// Authentication pages
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
-import Messages from "@/pages/Messages";
-import AuthTest from "@/pages/AuthTest";
-import StableLogin from "@/pages/StableLogin";
-import ComprehensiveAuth from "@/pages/ComprehensiveAuth";
-import CleanAuth from "@/pages/CleanAuth";
-import MarketplaceMap from "@/pages/MarketplaceMap";
+
+// Seller pages
+import Sell from "@/pages/Sell";
+import EnhancedSellerProfile from "@/pages/EnhancedSellerProfile";
+import SellerProfileSetup from "@/pages/SellerProfileSetup";
+
+// Farm space pages
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
+
+// Communication pages
+import Messages from "@/pages/Messages";
 import SendMessage from "@/pages/SendMessage";
 
+// Commerce pages
+import Checkout from "@/pages/Checkout";
+
+// Map page
+import MarketplaceMap from "@/pages/MarketplaceMap";
+
+// Layout components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-function App() {
-  // Remove auth usage from App component since it's wrapped in AuthProvider in main.tsx
 
+function App() {
   return (
     <TooltipProvider>
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow">
           <Switch>
+            {/* Home */}
             <Route path="/" component={Home} />
+            
+            {/* Authentication */}
+            <Route path="/login" component={Login} />
+            <Route path="/signup" component={Signup} />
+            
+            {/* Listings/Products */}
             <Route path="/listings" component={AllListings} />
             <Route path="/listings/new" component={CreateListing} />
             <Route path="/listings/:id" component={ListingDetail} />
+            
+            {/* User Profile */}
             <Route path="/users/:id" component={UserProfile} />
             <Route path="/profile/edit" component={EditProfile} />
-            <Route path="/checkout/:listingId" component={Checkout} />
             <Route path="/orders" component={MyOrders} />
-            <Route path="/auth" component={Auth} />
-            <Route path="/login" component={Login} />
-            <Route path="/signup" component={Signup} />
-        <Route path="/auth-test" component={AuthTest} />
-        <Route path="/stable-login" component={StableLogin} />
-        <Route path="/comprehensive-auth" component={ComprehensiveAuth} />
-        <Route path="/clean-auth" component={CleanAuth} />
+            
+            {/* Selling */}
             <Route path="/sell" component={Sell} />
-            <Route path="/listings" component={Listings} />
-            <Route path="/messages" component={Messages} />
-            <Route path="/marketplace-map" component={MarketplaceMap} />
             <Route path="/seller-profile/:id" component={EnhancedSellerProfile} />
             <Route path="/seller-profile-setup" component={SellerProfileSetup} />
+            
+            {/* Farm Spaces */}
             <Route path="/farm-spaces" component={FarmSpaces} />
             <Route path="/farm-spaces/:id" component={FarmSpaceDetail} />
             <Route path="/farm-spaces/:id/message" component={SendMessage} />
+            
+            {/* Communication */}
+            <Route path="/messages" component={Messages} />
+            
+            {/* Commerce */}
+            <Route path="/checkout/:listingId" component={Checkout} />
+            
+            {/* Map */}
+            <Route path="/map" component={MarketplaceMap} />
+            
+            {/* 404 */}
             <Route component={NotFound} />
           </Switch>
         </main>

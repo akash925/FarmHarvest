@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,22 +6,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useLocation, Link } from "wouter";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  zip: z.string().regex(/^\d{5}(-\d{4})?$/, "Please enter a valid ZIP code").optional().or(z.literal(""))
+  zip: z.string().min(5, "ZIP code must be at least 5 characters")
 });
 
 type SignupForm = z.infer<typeof signupSchema>;
 
 export default function Signup() {
   const [, navigate] = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { signUp, signUpError, isSigningUp, isAuthenticated } = useAuth();
   const [success, setSuccess] = useState(false);
 
   const form = useForm<SignupForm>({
@@ -34,43 +35,33 @@ export default function Signup() {
     }
   });
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
   const onSubmit = async (data: SignupForm) => {
-    setIsLoading(true);
-    setError("");
-    
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (response.ok) {
-        setSuccess(true);
-        setTimeout(() => navigate("/"), 2000);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Signup failed");
-      }
-    } catch (err: any) {
-      setError("Network error. Please try again.");
-    } finally {
-      setIsLoading(false);
+      await signUp(data);
+      setSuccess(true);
+      setTimeout(() => navigate("/"), 2000);
+    } catch (error) {
+      // Error is handled by the hook and available in signUpError
+      console.error("Signup failed:", error);
     }
   };
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
               <div className="text-green-600 text-4xl mb-4">✓</div>
-              <h2 className="text-xl font-semibold mb-2">Account Created!</h2>
-              <p className="text-gray-600">You've been automatically signed in. Redirecting...</p>
+              <h2 className="text-xl font-semibold mb-2">Welcome to FarmDirect!</h2>
+              <p className="text-gray-600">Your account has been created and you're now signed in. Redirecting...</p>
             </div>
           </CardContent>
         </Card>
@@ -79,7 +70,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <Helmet>
         <title>Sign Up - FarmDirect</title>
         <meta name="description" content="Create your FarmDirect account to start buying and selling fresh, local produce." />
@@ -89,7 +80,7 @@ export default function Signup() {
         <CardHeader>
           <CardTitle>Create Your Account</CardTitle>
           <CardDescription>
-            Join FarmDirect to connect with local farmers
+            Join FarmDirect to connect with local farmers and access fresh produce
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -130,7 +121,7 @@ export default function Signup() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input {...field} type="password" placeholder="Create a password" />
+                      <Input {...field} type="password" placeholder="Create a password (min 8 characters)" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -142,7 +133,7 @@ export default function Signup() {
                 name="zip"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ZIP Code (Optional)</FormLabel>
+                    <FormLabel>ZIP Code</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Enter your ZIP code" />
                     </FormControl>
@@ -151,14 +142,16 @@ export default function Signup() {
                 )}
               />
 
-              {error && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-                  {error}
-                </div>
+              {signUpError && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {signUpError.message || "Sign up failed. Please try again."}
+                  </AlertDescription>
+                </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Create Account"}
+              <Button type="submit" className="w-full" disabled={isSigningUp}>
+                {isSigningUp ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
           </Form>
@@ -166,9 +159,12 @@ export default function Signup() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline">
+              <button 
+                onClick={() => navigate("/login")}
+                className="text-green-600 hover:text-green-500 font-medium"
+              >
                 Sign in
-              </Link>
+              </button>
             </p>
           </div>
         </CardContent>

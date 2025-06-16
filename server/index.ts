@@ -5,6 +5,7 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 import { pool } from "./db";
 import { configurePassport, setupAuthRoutes } from "./auth";
+import { config } from "./config";
 
 // Extend express-session with our custom properties
 declare module 'express-session' {
@@ -29,34 +30,29 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Remove all CORS middleware - not needed for same-origin requests
-// Vite dev server proxies API requests to same origin
-
-// Set up session handling - simplified for debugging
+// Set up proper session handling with PostgreSQL store
 app.use(session({
-  secret: 'farm-produce-marketplace-secret-key-2024',
+  store: new PgSession({
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true,
+  }),
+  secret: config.SESSION_SECRET,
   resave: false,
-  saveUninitialized: true, // Create sessions to debug cookie issues
+  saveUninitialized: false, // Only save sessions with data
   name: 'farmSessionId',
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-    secure: false,
-    httpOnly: false, // Allow JS access to debug
-    sameSite: 'lax'
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    secure: config.NODE_ENV === 'production', // HTTPS in production
+    httpOnly: true, // Prevent XSS
+    sameSite: 'lax' // CSRF protection
   }
 }));
 
 // Configure passport for authentication
 configurePassport();
 
-// Debug middleware for session tracking
-app.use((req, res, next) => {
-  if (req.path.includes('/api/auth/')) {
-    console.log(`[${req.method}] ${req.path} - Session ID: ${req.sessionID}, User ID: ${req.session.userId}`);
-  }
-  next();
-});
-
+// Request logging middleware for API endpoints
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -87,38 +83,74 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  // Setup authentication routes
-  setupAuthRoutes(app);
+// Security headers middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  if (config.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// Global error handler
+const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Global error handler:', err);
   
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+  const isDevelopment = config.NODE_ENV === 'development';
+  const status = err.status || err.statusCode || 500;
+  
+  if (res.headersSent) {
+    return next(err);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  res.status(status).json({ 
+    message: isDevelopment ? err.message : 'Internal Server Error',
+    ...(isDevelopment && { stack: err.stack })
   });
+};
+
+(async () => {
+  try {
+    // Setup authentication routes
+    setupAuthRoutes(app);
+    
+    const server = await registerRoutes(app);
+
+    // Apply global error handler
+    app.use(errorHandler);
+
+    // Setup Vite in development or serve static files in production
+    if (config.NODE_ENV === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // Start server
+    const port = config.PORT;
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`🚀 FarmDirect server running on port ${port} in ${config.NODE_ENV} mode`);
+      log(`🔐 Authentication: Local${config.FACEBOOK_APP_ID ? ', Facebook' : ''}${config.INSTAGRAM_CLIENT_ID ? ', Instagram' : ''}`);
+      log(`💾 Database: ${config.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    });
+    
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        log('Process terminated');
+        process.exit(0);
+      });
+    });
+    
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 })();
