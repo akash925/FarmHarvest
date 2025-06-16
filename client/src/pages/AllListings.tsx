@@ -43,8 +43,17 @@ export default function AllListings() {
   }, [searchQuery, category, zip]);
   
   // Fetch listings based on filters
-  const { data, isLoading, error } = useQuery<{listings: any[]}>({
-    queryKey: [`/api/listings?${searchParams.toString()}`],
+  const { data, isLoading, error } = useQuery<{ listings: any[] }>({
+    queryKey: ['listings', searchQuery, category, zip],
+    queryFn: async () => {
+      const response = await fetch(`/api/listings?${searchParams.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch listings');
+      }
+      return response.json();
+    },
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 1,
   });
 
   // Handle search from the search form

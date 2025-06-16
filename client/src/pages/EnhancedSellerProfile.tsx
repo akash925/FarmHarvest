@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/simpleAuth";
+import { useAuth } from "@/hooks/useAuth";
 import ListingCard from "@/components/ListingCard";
 
 // Mock data for development only - will be replaced with real data
@@ -36,33 +36,6 @@ const sampleMedia = [
     mediaType: "video" as const,
     url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
     caption: "Tour of our sustainable farming practices",
-  },
-];
-
-const sampleFarmSpaces = [
-  {
-    id: 1,
-    squareFootage: 500,
-    soilType: "loam",
-    lightConditions: "full_sun",
-    irrigationOptions: "manual",
-    managementLevel: "daily_visit",
-    price: 15000, // in cents ($150)
-    pricingType: "monthly",
-    status: "available",
-    additionalNotes: "Perfect for growing tomatoes and peppers. Has been used for vegetables for the past 3 years.",
-  },
-  {
-    id: 2,
-    squareFootage: 1000,
-    soilType: "clay",
-    lightConditions: "partial_shade",
-    irrigationOptions: "automated",
-    managementLevel: "hands_off",
-    price: 25000, // in cents ($250)
-    pricingType: "seasonal",
-    status: "available",
-    additionalNotes: "Great for fruit trees and berries. Automated drip irrigation system installed.",
   },
 ];
 
@@ -422,7 +395,7 @@ export default function EnhancedSellerProfile() {
           )}
           
           {/* Farm Spaces Preview */}
-          {(sellerData.farmSpaces && sellerData.farmSpaces.length > 0 || sampleFarmSpaces.length > 0) && (
+          {sellerData.farmSpaces && sellerData.farmSpaces.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Available Farm Spaces</CardTitle>
@@ -430,30 +403,28 @@ export default function EnhancedSellerProfile() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(sellerData.farmSpaces.length > 0 ? sellerData.farmSpaces : sampleFarmSpaces)
-                    .slice(0, 2)
-                    .map((space) => (
-                      <div key={space.id} className="border rounded-md p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">
-                              {space.squareFootage} sq ft - {space.soilType} soil
-                            </h3>
-                            <p className="text-slate-600">
-                              {space.lightConditions.replace(/_/g, ' ')} · {space.irrigationOptions.replace(/_/g, ' ')} irrigation
-                            </p>
-                          </div>
-                          <Badge className={space.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
-                            {space.status.charAt(0).toUpperCase() + space.status.slice(1)}
-                          </Badge>
-                        </div>
-                        <div className="mt-2">
-                          <p className="font-bold text-primary">
-                            ${(space.price / 100).toFixed(2)}/{space.pricingType}
+                  {sellerData.farmSpaces.slice(0, 2).map((space) => (
+                    <div key={space.id} className="border rounded-md p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">
+                            {space.squareFootage} sq ft - {space.soilType} soil
+                          </h3>
+                          <p className="text-slate-600">
+                            {space.lightConditions.replace(/_/g, ' ')} · {space.irrigationOptions.replace(/_/g, ' ')} irrigation
                           </p>
                         </div>
+                        <Badge className={space.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+                          {space.status.charAt(0).toUpperCase() + space.status.slice(1)}
+                        </Badge>
                       </div>
-                    ))}
+                      <div className="mt-2">
+                        <p className="font-bold text-primary">
+                          ${(space.price / 100).toFixed(2)}/{space.pricingType}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 
                 <Button 
@@ -534,10 +505,10 @@ export default function EnhancedSellerProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {(sellerData.farmSpaces && sellerData.farmSpaces.length > 0) || (currentUser && currentUser.id !== parseInt(id)) ? (
+              {sellerData.farmSpaces && sellerData.farmSpaces.length > 0 ? (
                 <div className="space-y-6">
                   {/* Spaces list */}
-                  {(sellerData.farmSpaces?.length > 0 ? sellerData.farmSpaces : sampleFarmSpaces).map((space) => (
+                  {sellerData.farmSpaces.map((space) => (
                     <Card key={space.id}>
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row gap-6">
@@ -628,7 +599,7 @@ export default function EnhancedSellerProfile() {
                     This seller doesn't have any farm spaces listed for rent.
                   </p>
                   {currentUser && currentUser.id === parseInt(id) && (
-                    <Button onClick={() => navigate("/seller-profile-setup")}>
+                    <Button onClick={() => navigate("/farm-spaces/new")}>
                       Add Farm Spaces
                     </Button>
                   )}

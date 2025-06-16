@@ -33,6 +33,7 @@ export default function Sell() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // we'll create the form only when the user is authenticated & has a farm to avoid hook-count mismatch
   const form = useForm<QuickListingForm>({
     resolver: zodResolver(quickListingSchema),
     defaultValues: {
@@ -41,7 +42,7 @@ export default function Sell() {
       quantity: "",
       unit: "",
       description: "",
-    }
+    },
   });
 
   // 1) Show loading spinner while checking session
@@ -54,15 +55,9 @@ export default function Sell() {
   }
 
   // 2) Redirect to /login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setLocation("/login");
-    }
-  }, [isAuthenticated, setLocation]);
-
   if (!isAuthenticated) {
-    // while redirecting, render nothing
-    return null;
+    setLocation('/login');
+    return null; // no hooks below will run
   }
 
   // 3) Once authenticated, check if user has a seller profile
@@ -162,9 +157,14 @@ export default function Sell() {
         throw new Error(error.message || 'Failed to create listing');
       }
 
+      const result = await response.json();
       setSubmitSuccess(true);
       form.reset();
-      setTimeout(() => setSubmitSuccess(false), 3000);
+      setTimeout(() => setSubmitSuccess(false), 1500);
+      // navigate directly to the new listing detail
+      if (result?.listing?.id) {
+        setLocation(`/listings/${result.listing.id}`);
+      }
     } catch (error) {
       console.error('Create listing error:', error);
       setSubmitError(error instanceof Error ? error.message : 'Failed to create listing');

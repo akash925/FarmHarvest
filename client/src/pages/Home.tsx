@@ -1,6 +1,9 @@
 import { Helmet } from 'react-helmet-async';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <>
       <Helmet>
@@ -38,7 +41,7 @@ export default function Home() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className={`grid ${isAuthenticated ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-8 max-w-4xl mx-auto`}>
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <div className="text-4xl mb-4">🛒</div>
               <h3 className="text-xl font-semibold mb-2">Browse Products</h3>
@@ -48,14 +51,16 @@ export default function Home() {
               </a>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <div className="text-4xl mb-4">👤</div>
-              <h3 className="text-xl font-semibold mb-2">Create Account</h3>
-              <p className="text-gray-600 mb-4">Join our farming community</p>
-              <a href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Sign Up
-              </a>
-            </div>
+            {!isAuthenticated && (
+              <div className="bg-white p-6 rounded-lg shadow-md text-center">
+                <div className="text-4xl mb-4">👤</div>
+                <h3 className="text-xl font-semibold mb-2">Create Account</h3>
+                <p className="text-gray-600 mb-4">Join our farming community</p>
+                <a href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                  Sign Up
+                </a>
+              </div>
+            )}
 
             <div className="bg-white p-6 rounded-lg shadow-md text-center">
               <div className="text-4xl mb-4">🏪</div>

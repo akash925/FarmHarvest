@@ -17,6 +17,7 @@ import Listings from "@/pages/Listings";
 import UserProfile from "@/pages/UserProfile";
 import EditProfile from "@/pages/EditProfile";
 import MyOrders from "@/pages/MyOrders";
+import FarmProfileEdit from "@/pages/FarmProfileEdit";
 
 // Authentication pages
 import Login from "@/pages/Login";
@@ -69,6 +70,7 @@ function App() {
               {/* User Profile */}
               <Route path="/users/:id" component={UserProfile} />
               <Route path="/profile/edit" component={EditProfile} />
+              <Route path="/farm-profile-edit" component={FarmProfileEdit} />
               <Route path="/orders" component={MyOrders} />
               
               {/* Selling */}
