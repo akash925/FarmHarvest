@@ -33,10 +33,24 @@ export default function MarketplaceMap() {
 
   const { data: listingsData } = useQuery<{ listings: Listing[] }>({
     queryKey: ['/api/listings'],
+    queryFn: async () => {
+      const response = await fetch('/api/listings');
+      if (!response.ok) {
+        throw new Error('Failed to fetch listings');
+      }
+      return response.json();
+    }
   });
 
   const { data: farmSpacesData } = useQuery<{ farmSpaces: FarmSpace[] }>({
     queryKey: ['/api/farm-spaces'],
+    queryFn: async () => {
+      const response = await fetch('/api/farm-spaces');
+      if (!response.ok) {
+        throw new Error('Failed to fetch farm spaces');
+      }
+      return response.json();
+    }
   });
 
   // Santa Monica area coordinates for demo
@@ -56,13 +70,13 @@ export default function MarketplaceMap() {
     })),
     ...(farmSpacesData?.farmSpaces || []).map((space, index) => ({
       id: space.id + 1000, // Offset to avoid ID conflicts
-      title: space.title,
+      title: space.title || `Farm Space ${space.id}`,
       type: 'farmspace' as const,
       lat: 34.0195 + (Math.random() - 0.5) * 0.15,
       lng: -118.4912 + (Math.random() - 0.5) * 0.15,
-      price: space.pricePerMonth,
+      price: space.pricePerMonth || 0,
       seller: "Farm Owner",
-      description: space.description || `${space.spaceType} farm space`
+      description: space.description || `${space.sizeSqft || 'Unknown size'} sq ft farm space`
     }))
   ];
 

@@ -90,7 +90,7 @@ export default function UserProfile() {
         description: "Please sign in to contact this seller",
         variant: "destructive",
       });
-      navigate('/clean-auth');
+      navigate('/auth');
       return;
     }
     // Navigate to messages page with pre-filled recipient
@@ -104,7 +104,7 @@ export default function UserProfile() {
         description: "Please sign in to follow this seller",
         variant: "destructive",
       });
-      navigate('/clean-auth');
+      navigate('/auth');
       return;
     }
     

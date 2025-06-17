@@ -29,7 +29,13 @@ import {
   Loader, 
   MessageSquare, 
   Star,
-  ThumbsUp 
+  ThumbsUp,
+  Package,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Truck,
+  MessageCircle
 } from 'lucide-react';
 import { 
   Form, 
@@ -49,6 +55,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 // Review schema
 const reviewSchema = z.object({
@@ -341,8 +348,8 @@ function OrderCard({ order, type }: { order: any, type: 'buying' | 'selling' }) 
 }
 
 export default function MyOrders() {
+  const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'buying' | 'selling'>('buying');
   
   // Redirect if not authenticated
@@ -357,6 +364,32 @@ export default function MyOrders() {
   });
   
   const orders = data?.orders || [];
+  
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'delivered':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'cancelled':
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return <Package className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
   
   return (
     <>
@@ -413,7 +446,60 @@ export default function MyOrders() {
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
                   {orders.map((order) => (
-                    <OrderCard key={order.id} order={order} type="buying" />
+                    <Card key={order.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              Order #{order.id}
+                              {getStatusIcon(order.status)}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">
+                              Placed on {new Date(order.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3 mb-4">
+                          {order.items.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <div>
+                                <span className="font-medium">{item.title}</span>
+                                <span className="text-gray-500 ml-2">x{item.quantity}</span>
+                              </div>
+                              <span className="font-medium">
+                                ${(item.price / 100).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="border-t pt-3 flex justify-between items-center">
+                          <div className="text-lg font-bold">
+                            Total: ${(order.total / 100).toFixed(2)}
+                          </div>
+                          <div className="flex gap-2">
+                            {order.status === 'delivered' && (
+                              <Button variant="outline" size="sm">
+                                <Star className="h-4 w-4 mr-2" />
+                                Rate Order
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm">
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Contact Seller
+                            </Button>
+                            <Button size="sm">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               ) : (
@@ -448,7 +534,60 @@ export default function MyOrders() {
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
                   {orders.map((order) => (
-                    <OrderCard key={order.id} order={order} type="selling" />
+                    <Card key={order.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              Order #{order.id}
+                              {getStatusIcon(order.status)}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">
+                              Placed on {new Date(order.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3 mb-4">
+                          {order.items.map((item, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <div>
+                                <span className="font-medium">{item.title}</span>
+                                <span className="text-gray-500 ml-2">x{item.quantity}</span>
+                              </div>
+                              <span className="font-medium">
+                                ${(item.price / 100).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="border-t pt-3 flex justify-between items-center">
+                          <div className="text-lg font-bold">
+                            Total: ${(order.total / 100).toFixed(2)}
+                          </div>
+                          <div className="flex gap-2">
+                            {order.status === 'delivered' && (
+                              <Button variant="outline" size="sm">
+                                <Star className="h-4 w-4 mr-2" />
+                                Rate Order
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm">
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Contact Buyer
+                            </Button>
+                            <Button size="sm">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               ) : (

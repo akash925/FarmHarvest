@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -39,11 +39,22 @@ export default function FarmSpaces() {
     tool_storage: ''
   });
 
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
+  // Debounce filters to avoid excessive API calls
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [filters]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['/api/farm-spaces', filters],
+    queryKey: ['/api/farm-spaces', debouncedFilters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(debouncedFilters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
       

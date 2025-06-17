@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/lib/cleanAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -83,6 +83,9 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/orders">My Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/messages">Messages</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
@@ -177,6 +180,13 @@ export default function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   My Orders
+                </Link>
+                <Link 
+                  href="/messages" 
+                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Messages
                 </Link>
                 <button 
                   onClick={() => {

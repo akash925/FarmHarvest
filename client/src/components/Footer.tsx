@@ -35,8 +35,8 @@ export default function Footer() {
             <ul className="space-y-2">
               <li><Link href="/listings" className="text-slate-600 hover:text-slate-900">Browse Listings</Link></li>
               <li><Link href="/listings/new" className="text-slate-600 hover:text-slate-900">Sell Your Produce</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Pricing</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Reviews</Link></li>
+              <li><Link href="/farm-spaces" className="text-slate-600 hover:text-slate-900">Farm Spaces</Link></li>
+              <li><Link href="/map" className="text-slate-600 hover:text-slate-900">Interactive Map</Link></li>
             </ul>
           </div>
           
@@ -44,10 +44,9 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-slate-900 tracking-wider uppercase mb-4">Company</h3>
             <ul className="space-y-2">
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">About Us</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Blog</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Careers</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Contact</Link></li>
+              <li><Link href="/about" className="text-slate-600 hover:text-slate-900">About Us</Link></li>
+              <li><Link href="/blog" className="text-slate-600 hover:text-slate-900">Blog</Link></li>
+              <li><Link href="/contact" className="text-slate-600 hover:text-slate-900">Contact</Link></li>
             </ul>
           </div>
           
@@ -55,10 +54,10 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-slate-900 tracking-wider uppercase mb-4">Support</h3>
             <ul className="space-y-2">
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Help Center</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Safety</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Terms of Service</Link></li>
-              <li><Link href="#" className="text-slate-600 hover:text-slate-900">Privacy Policy</Link></li>
+              <li><Link href="/help" className="text-slate-600 hover:text-slate-900">Help Center</Link></li>
+              <li><Link href="/safety" className="text-slate-600 hover:text-slate-900">Safety</Link></li>
+              <li><Link href="/terms" className="text-slate-600 hover:text-slate-900">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="text-slate-600 hover:text-slate-900">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>

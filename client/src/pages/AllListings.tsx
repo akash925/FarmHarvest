@@ -31,6 +31,26 @@ export default function AllListings() {
   const [zip, setZip] = useState(searchParams.get('zip') || '');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
+  // Debounced search state
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+  const [debouncedZip, setDebouncedZip] = useState(zip);
+
+  // Debounce search query
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Debounce ZIP code
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedZip(zip);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [zip]);
+  
   // Update query parameters when filters change
   useEffect(() => {
     const params = new URLSearchParams();
@@ -44,9 +64,14 @@ export default function AllListings() {
   
   // Fetch listings based on filters
   const { data, isLoading, error } = useQuery<{ listings: any[] }>({
-    queryKey: ['listings', searchQuery, category, zip],
+    queryKey: ['listings', debouncedSearchQuery, category, debouncedZip],
     queryFn: async () => {
-      const response = await fetch(`/api/listings?${searchParams.toString()}`);
+      const params = new URLSearchParams();
+      if (debouncedSearchQuery) params.append('query', debouncedSearchQuery);
+      if (category && category !== 'all') params.append('category', category);
+      if (debouncedZip) params.append('zip', debouncedZip);
+      
+      const response = await fetch(`/api/listings?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch listings');
       }
@@ -220,6 +245,8 @@ export default function AllListings() {
                             setSearchQuery('');
                             setCategory('');
                             setZip('');
+                            setDebouncedSearchQuery('');
+                            setDebouncedZip('');
                           }}
                           variant="outline"
                         >

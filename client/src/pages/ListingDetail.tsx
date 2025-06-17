@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
-import { apiRequest } from '@/lib/queryClient';
-import { useAuth } from "@/lib/simpleAuth";
+import { useAuth } from "@/lib/cleanAuth";
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,7 +45,15 @@ export default function ListingDetail() {
   const [quantity, setQuantity] = useState(1);
   
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/listings/${listingId}`]
+    queryKey: [`/api/listings/${listingId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/listings/${listingId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch listing');
+      }
+      return response.json();
+    },
+    enabled: !!listingId,
   });
   
   const listing = data?.listing;
@@ -226,7 +233,7 @@ export default function ListingDetail() {
                     )}
                   </div>
                   <div className="ml-auto">
-                    <Button variant="outline" onClick={() => navigate(`/users/${seller?.id}`)}>
+                    <Button variant="outline" onClick={() => navigate(`/seller-profile/${seller?.id}`)}>
                       View Profile
                     </Button>
                   </div>
@@ -269,13 +276,27 @@ export default function ListingDetail() {
                   <span className="font-semibold text-slate-900">${calculateTotal().toFixed(2)}</span>
                 </div>
                 
-                <Button 
-                  className="w-full bg-primary-400 hover:bg-primary-500 text-white" 
-                  onClick={handleCheckout}
-                  disabled={listing.quantity === 0}
-                >
-                  {listing.quantity === 0 ? 'Out of Stock' : 'Proceed to Checkout'}
-                </Button>
+                <div className="space-y-3">
+                  <Button 
+                    variant="outline"
+                    className="w-full" 
+                    onClick={() => {
+                      if (seller?.id) {
+                        navigate(`/messages?recipient=${seller.id}`);
+                      }
+                    }}
+                  >
+                    Contact Seller
+                  </Button>
+                  
+                  <Button 
+                    className="w-full bg-primary-400 hover:bg-primary-500 text-white" 
+                    onClick={handleCheckout}
+                    disabled={listing.quantity === 0}
+                  >
+                    {listing.quantity === 0 ? 'Out of Stock' : 'Proceed to Checkout'}
+                  </Button>
+                </div>
                 
                 {!isAuthenticated && (
                   <p className="text-sm text-slate-500 mt-2 text-center">

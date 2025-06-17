@@ -24,7 +24,7 @@ const configSchema = z.object({
   
   // App
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().default('5000').transform(Number),
+  PORT: z.string().default('3000').transform(Number),
   
   // File upload
   MAX_FILE_SIZE: z.string().default('10485760').transform(Number), // 10MB

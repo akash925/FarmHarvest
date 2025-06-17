@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/cleanAuth";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 
@@ -22,7 +22,7 @@ type SignupForm = z.infer<typeof signupSchema>;
 
 export default function Signup() {
   const [, navigate] = useLocation();
-  const { signUp, signUpError, isSigningUp, isAuthenticated } = useAuth();
+  const { signup, isLoading, isAuthenticated } = useAuth();
   const [success, setSuccess] = useState(false);
 
   const form = useForm<SignupForm>({
@@ -45,25 +45,29 @@ export default function Signup() {
   const onSubmit = async (data: SignupForm) => {
     try {
       console.log('Starting signup process...');
-      await signUp(data);
+      await signup(data.name, data.email, data.password, data.zip);
       console.log('Signup API call completed');
       
       // Don't set success immediately, wait for auth state to update
       // The useEffect below will handle redirecting when isAuthenticated becomes true
     } catch (error) {
-      // Error is handled by the hook and available in signUpError
       console.error("Signup failed:", error);
+      // Show error in form
+      form.setError('root', { 
+        type: 'manual', 
+        message: error instanceof Error ? error.message : 'Signup failed' 
+      });
     }
   };
 
   // Redirect when successfully authenticated
   useEffect(() => {
-    if (isAuthenticated && !isSigningUp) {
+    if (isAuthenticated && !isLoading) {
       console.log('User is now authenticated, redirecting...');
       setSuccess(true);
       setTimeout(() => navigate("/"), 1500);
     }
-  }, [isAuthenticated, isSigningUp, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   if (success) {
     return (
@@ -154,16 +158,16 @@ export default function Signup() {
                 )}
               />
 
-              {signUpError && (
+              {form.formState.errors.root && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    {signUpError.message || "Sign up failed. Please try again."}
+                    {form.formState.errors.root.message || "Sign up failed. Please try again."}
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isSigningUp}>
-                {isSigningUp ? "Creating Account..." : "Create Account"}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
           </Form>

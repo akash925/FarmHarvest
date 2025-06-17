@@ -1,4 +1,4 @@
-import { useParams, Link } from 'wouter';
+import { useParams, Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import {
   User
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import InteractiveMap from '@/components/InteractiveMap';
 
 interface FarmSpace {
   id: number;
@@ -47,6 +48,7 @@ interface SellerProfile {
 
 export default function FarmSpaceDetail() {
   const { id } = useParams();
+  const [, navigate] = useLocation();
 
   const { data: farmSpace, isLoading } = useQuery({
     queryKey: ['/api/farm-spaces', id],
@@ -265,15 +267,15 @@ export default function FarmSpaceDetail() {
                   className="w-full" 
                   size="lg"
                   onClick={() => {
-                    if (sellerData?.user?.email) {
-                      window.location.href = `mailto:${sellerData.user.email}?subject=Inquiry about ${farmSpace.title}&body=Hi! I'm interested in renting your farm space "${farmSpace.title}". Could you tell me more about it?`;
+                    if (sellerData?.user?.id) {
+                      navigate(`/messages?recipient=${sellerData.user.id}`);
                     }
                   }}
                 >
                   Send Message
                 </Button>
                 
-                <Link href={`/users/${farmSpace.sellerProfileId}`}>
+                <Link href={`/seller-profile/${sellerData?.user?.id}`}>
                   <Button variant="outline" className="w-full">
                     View Profile
                   </Button>
@@ -287,13 +289,23 @@ export default function FarmSpaceDetail() {
                 <CardTitle>Location</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-48 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <div className="text-center text-slate-500">
-                    <MapPin className="h-8 w-8 mx-auto mb-2" />
-                    <p className="text-sm">Map View</p>
-                    <p className="text-xs">{farmSpace.location}</p>
-                  </div>
+                <div className="h-48">
+                  <InteractiveMap
+                    locations={[{
+                      id: farmSpace.id,
+                      title: farmSpace.title,
+                      type: 'farmspace',
+                      lat: 34.0194 + (Math.random() - 0.5) * 0.02, // Santa Monica area with slight variation
+                      lng: -118.4912 + (Math.random() - 0.5) * 0.02,
+                      price: farmSpace.pricePerMonth,
+                      seller: sellerData?.user?.name || 'Unknown',
+                      description: farmSpace.description.substring(0, 100) + '...'
+                    }]}
+                    center={[34.0194, -118.4912]}
+                    zoom={13}
+                  />
                 </div>
+                <p className="text-xs text-slate-500 mt-2">{farmSpace.location}</p>
               </CardContent>
             </Card>
           </div>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/cleanAuth";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 
@@ -20,7 +20,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { signIn, signInError, isSigningIn, isAuthenticated } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -32,21 +32,25 @@ export default function Login() {
 
   // Redirect if already authenticated or after successful login
   useEffect(() => {
-    if (isAuthenticated && !isSigningIn) {
+    if (isAuthenticated && !isLoading) {
       console.log('User is authenticated, redirecting...');
       navigate("/");
     }
-  }, [isAuthenticated, isSigningIn, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   const onSubmit = async (data: LoginForm) => {
     try {
       console.log('Starting login process...');
-      await signIn(data);
+      await login(data.email, data.password);
       console.log('Login API call completed');
       // Navigation will be handled by the useEffect when auth state updates
     } catch (error) {
-      // Error is handled by the hook and available in signInError
       console.error("Login failed:", error);
+      // Show error in form
+      form.setError('root', { 
+        type: 'manual', 
+        message: error instanceof Error ? error.message : 'Login failed' 
+      });
     }
   };
 
@@ -95,16 +99,16 @@ export default function Login() {
                 )}
               />
 
-              {signInError && (
+              {form.formState.errors.root && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    {signInError.message || "Sign in failed. Please try again."}
+                    {form.formState.errors.root.message || "Sign in failed. Please try again."}
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isSigningIn}>
-                {isSigningIn ? "Signing in..." : "Sign In"}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
           </Form>

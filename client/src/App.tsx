@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import AllListings from "@/pages/AllListings";
 import ListingDetail from "@/pages/ListingDetail";
 import CreateListing from "@/pages/CreateListing";
+import EditListing from "@/pages/EditListing";
 import Listings from "@/pages/Listings";
 
 // User pages
@@ -31,6 +32,7 @@ import SellerProfileSetup from "@/pages/SellerProfileSetup";
 // Farm space pages
 import FarmSpaces from "@/pages/FarmSpaces";
 import FarmSpaceDetail from "@/pages/FarmSpaceDetail";
+import CreateFarmSpace from "@/pages/CreateFarmSpace";
 
 // Communication pages
 import Messages from "@/pages/Messages";
@@ -41,6 +43,15 @@ import Checkout from "@/pages/Checkout";
 
 // Map page
 import MarketplaceMap from "@/pages/MarketplaceMap";
+
+// Static pages
+import About from "@/pages/About";
+import Blog from "@/pages/Blog";
+import Contact from "@/pages/Contact";
+import Help from "@/pages/Help";
+import Safety from "@/pages/Safety";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -65,6 +76,7 @@ function App() {
               {/* Listings/Products */}
               <Route path="/listings" component={AllListings} />
               <Route path="/listings/new" component={CreateListing} />
+              <Route path="/listings/edit/:id" component={EditListing} />
               <Route path="/listings/:id" component={ListingDetail} />
               
               {/* User Profile */}
@@ -80,6 +92,7 @@ function App() {
               
               {/* Farm Spaces */}
               <Route path="/farm-spaces" component={FarmSpaces} />
+              <Route path="/farm-spaces/new" component={CreateFarmSpace} />
               <Route path="/farm-spaces/:id" component={FarmSpaceDetail} />
               <Route path="/farm-spaces/:id/message" component={SendMessage} />
               
@@ -91,6 +104,15 @@ function App() {
               
               {/* Map */}
               <Route path="/map" component={MarketplaceMap} />
+              
+              {/* Static Pages */}
+              <Route path="/about" component={About} />
+              <Route path="/blog" component={Blog} />
+              <Route path="/contact" component={Contact} />
+              <Route path="/help" component={Help} />
+              <Route path="/safety" component={Safety} />
+              <Route path="/terms" component={Terms} />
+              <Route path="/privacy" component={Privacy} />
               
               {/* 404 */}
               <Route component={NotFound} />

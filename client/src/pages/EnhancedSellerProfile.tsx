@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/cleanAuth";
 import ListingCard from "@/components/ListingCard";
 
 // Mock data for development only - will be replaced with real data
@@ -91,38 +91,54 @@ export default function EnhancedSellerProfile() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   
+  // Debug logging
+  console.log('EnhancedSellerProfile - id:', id, 'currentUser:', currentUser);
+  
   // Fetch seller profile data
   const { data: profileData, isLoading, error } = useQuery({
     queryKey: ['/api/seller-profiles', id],
     queryFn: async () => {
       try {
+        console.log('Fetching seller profile for id:', id);
         // First check if profile exists
         const response = await fetch(`/api/seller-profiles/${id}`);
         
         if (response.ok) {
-          return response.json();
+          const data = await response.json();
+          console.log('Seller profile data:', data);
+          return data;
         }
         
         // If profile doesn't exist but we're looking at our own profile, show setup option
-        if (response.status === 404 && currentUser && currentUser.id === parseInt(id)) {
+        if (response.status === 404 && currentUser && currentUser.id === parseInt(id || '0')) {
+          console.log('Profile not found for current user, returning null');
           return null;
         }
         
+        console.error('Failed to load seller profile, status:', response.status);
         throw new Error("Failed to load seller profile");
       } catch (error) {
         console.error("Error fetching seller profile:", error);
         throw error;
       }
     },
+    enabled: !!id,
   });
   
   const { data: userData } = useQuery({
     queryKey: ['/api/users', id],
     queryFn: async () => {
+      console.log('Fetching user data for id:', id);
       const response = await fetch(`/api/users/${id}`);
-      if (!response.ok) throw new Error("Failed to load user data");
-      return response.json();
+      if (!response.ok) {
+        console.error('Failed to load user data, status:', response.status);
+        throw new Error("Failed to load user data");
+      }
+      const data = await response.json();
+      console.log('User data:', data);
+      return data;
     },
+    enabled: !!id,
   });
   
   // Loading state
@@ -157,7 +173,7 @@ export default function EnhancedSellerProfile() {
   }
   
   // If no profile exists yet but it's the current user
-  if (!profileData && currentUser && currentUser.id === parseInt(id)) {
+  if (!profileData && currentUser && currentUser.id === parseInt(id || '0')) {
     return (
       <div className="container mx-auto py-12">
         <Card>
@@ -269,12 +285,12 @@ export default function EnhancedSellerProfile() {
             {sellerData.profile?.bio || user.about || "This seller hasn't added a bio yet."}
           </p>
           
-          {currentUser && currentUser.id === parseInt(id) ? (
-            <Button onClick={() => navigate("/seller-profile-setup")}>
+          {currentUser && currentUser.id === parseInt(id || '0') ? (
+            <Button onClick={() => navigate("/farm-profile-edit")}>
               {sellerData.profile ? "Edit Profile" : "Create Enhanced Profile"}
             </Button>
           ) : (
-            <Button>Contact Seller</Button>
+            <Button onClick={() => navigate(`/messages?recipient=${user.id}`)}>Contact Seller</Button>
           )}
         </div>
       </div>
@@ -301,7 +317,7 @@ export default function EnhancedSellerProfile() {
                 <h3 className="font-medium mb-2">Products Grown</h3>
                 <div className="flex flex-wrap gap-2">
                   {user.productsGrown ? (
-                    user.productsGrown.split(',').map((product, index) => (
+                    user.productsGrown.split(',').map((product: string, index: number) => (
                       <Badge key={index} variant="outline" className="bg-green-50 text-green-800">
                         {product.trim()}
                       </Badge>
@@ -364,7 +380,7 @@ export default function EnhancedSellerProfile() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {sellerData.listings.slice(0, 3).map((listing) => (
+                  {sellerData.listings.slice(0, 3).map((listing: any) => (
                     <div key={listing.id} className="border rounded-md overflow-hidden">
                       <div className="h-40 overflow-hidden">
                         <img
@@ -403,7 +419,7 @@ export default function EnhancedSellerProfile() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {sellerData.farmSpaces.slice(0, 2).map((space) => (
+                  {sellerData.farmSpaces.slice(0, 2).map((space: any) => (
                     <div key={space.id} className="border rounded-md p-4">
                       <div className="flex justify-between items-start">
                         <div>
@@ -411,7 +427,7 @@ export default function EnhancedSellerProfile() {
                             {space.squareFootage} sq ft - {space.soilType} soil
                           </h3>
                           <p className="text-slate-600">
-                            {space.lightConditions.replace(/_/g, ' ')} · {space.irrigationOptions.replace(/_/g, ' ')} irrigation
+                            {space.lightConditions?.replace(/_/g, ' ') || 'Unknown'} · {space.irrigationOptions?.replace(/_/g, ' ') || 'Unknown'} irrigation
                           </p>
                         </div>
                         <Badge className={space.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
@@ -451,7 +467,7 @@ export default function EnhancedSellerProfile() {
             <CardContent>
               {sellerData.listings && sellerData.listings.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {sellerData.listings.map((listing) => (
+                  {sellerData.listings.map((listing: any) => (
                     <div key={listing.id} className="border rounded-md overflow-hidden">
                       <div className="h-48 overflow-hidden">
                         <img
@@ -547,16 +563,16 @@ export default function EnhancedSellerProfile() {
                               </div>
                               <div>
                                 <span className="text-slate-500 text-sm">Light Conditions</span>
-                                <p className="font-medium capitalize">{space.lightConditions.replace(/_/g, ' ')}</p>
+                                <p className="font-medium capitalize">{space.lightConditions?.replace(/_/g, ' ') || 'Unknown'}</p>
                               </div>
-                              <div>
-                                <span className="text-slate-500 text-sm">Irrigation</span>
-                                <p className="font-medium capitalize">{space.irrigationOptions.replace(/_/g, ' ')}</p>
-                              </div>
-                              <div>
-                                <span className="text-slate-500 text-sm">Management Level</span>
-                                <p className="font-medium capitalize">{space.managementLevel.replace(/_/g, ' ')}</p>
-                              </div>
+                                                              <div>
+                                  <span className="text-slate-500 text-sm">Irrigation</span>
+                                  <p className="font-medium capitalize">{space.irrigationOptions?.replace(/_/g, ' ') || 'Unknown'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500 text-sm">Management Level</span>
+                                  <p className="font-medium capitalize">{space.managementLevel?.replace(/_/g, ' ') || 'Unknown'}</p>
+                                </div>
                             </div>
                             
                             {space.additionalNotes && (

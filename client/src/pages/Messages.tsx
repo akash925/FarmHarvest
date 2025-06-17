@@ -64,7 +64,7 @@ export default function Messages() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/clean-auth');
+      navigate('/auth');
       return;
     }
   }, [isAuthenticated, navigate]);

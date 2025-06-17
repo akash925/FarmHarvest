@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet-async';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/lib/cleanAuth';
 
 export default function Home() {
   const { isAuthenticated } = useAuth();

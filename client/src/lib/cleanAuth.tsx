@@ -10,13 +10,29 @@ interface User {
   productsGrown?: string;
 }
 
+interface SellerProfile {
+  id: number;
+  userId: number;
+  farmName: string;
+  bio: string;
+  address: string | null;
+  locationVisibility: string;
+  phone: string | null;
+  contactVisibility: string;
+  operationalHours: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface AuthContextType {
   user: User | null;
+  sellerProfile: SellerProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, zip?: string) => Promise<void>;
   logout: () => void;
+  signOut: () => void;
   loginWithFacebook: () => void;
   loginWithInstagram: () => void;
 }
@@ -29,11 +45,13 @@ export function useAuth() {
     // Return default values instead of throwing error
     return {
       user: null,
+      sellerProfile: null,
       isLoading: false,
       isAuthenticated: false,
       login: async () => {},
       signup: async () => {},
       logout: () => {},
+      signOut: () => {},
       loginWithFacebook: () => {},
       loginWithInstagram: () => {},
     };
@@ -43,6 +61,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Check if user is logged in on mount
@@ -83,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         console.log('Auth success - user data:', data.user);
         setUser(data.user);
+        setSellerProfile(data.sellerProfile || null);
         // Update localStorage
         localStorage.setItem('farmUser', JSON.stringify(data.user));
         localStorage.setItem('farmUserTimestamp', Date.now().toString());
@@ -90,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const errorData = await response.json();
         console.log('Auth failed - error:', errorData);
         setUser(null);
+        setSellerProfile(null);
         // Clear localStorage on auth failure
         localStorage.removeItem('farmUser');
         localStorage.removeItem('farmUserTimestamp');
@@ -173,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Clear user state and localStorage
     setUser(null);
+    setSellerProfile(null);
     localStorage.removeItem('farmUser');
     localStorage.removeItem('farmUserTimestamp');
     window.location.href = '/';
@@ -189,11 +211,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user,
+      sellerProfile,
       isLoading,
       isAuthenticated: !!user,
       login,
       signup,
       logout,
+      signOut: logout, // alias for backward compatibility
       loginWithFacebook,
       loginWithInstagram,
     }}>

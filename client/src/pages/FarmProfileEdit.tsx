@@ -21,6 +21,8 @@ const schema = z.object({
   phone: z.string().optional(),
   locationVisibility: z.enum(['full', 'area', 'city']).default('city'),
   contactVisibility: z.enum(['phone', 'email', 'both']).default('email'),
+  operationalHours: z.string().optional(),
+  operationalDays: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -52,12 +54,15 @@ export default function FarmProfileEdit() {
       phone: existing?.profile?.phone || '',
       locationVisibility: (existing?.profile?.locationVisibility as any) || 'city',
       contactVisibility: (existing?.profile?.contactVisibility as any) || 'email',
+      operationalHours: existing?.profile?.operationalHours?.hours || '',
+      operationalDays: existing?.profile?.operationalHours?.days?.join(', ') || '',
     },
   });
 
   // keep form in sync when query finishes
   useEffect(() => {
     if (existing?.profile) {
+      const operationalHours = existing.profile.operationalHours || {};
       form.reset({
         farmName: existing.profile.farmName,
         bio: existing.profile.bio,
@@ -65,6 +70,8 @@ export default function FarmProfileEdit() {
         phone: existing.profile.phone || '',
         locationVisibility: existing.profile.locationVisibility,
         contactVisibility: existing.profile.contactVisibility,
+        operationalHours: operationalHours.hours || '',
+        operationalDays: operationalHours.days?.join(', ') || '',
       });
     }
   }, [existing, form]);
@@ -72,11 +79,22 @@ export default function FarmProfileEdit() {
   // save mutation
   const patchMutation = useMutation({
     mutationFn: async (data: FormValues) => {
+      // Convert operational hours back to expected format
+      const profileData = {
+        ...data,
+        operationalHours: {
+          hours: data.operationalHours || '',
+          days: data.operationalDays ? data.operationalDays.split(',').map(d => d.trim()).filter(Boolean) : []
+        }
+      };
+      // Remove the individual fields
+      delete (profileData as any).operationalDays;
+      
       const res = await fetch(`/api/seller-profiles/${user!.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ profile: data }),
+        body: JSON.stringify({ profile: profileData }),
       });
       if (!res.ok) throw new Error((await res.json()).message || 'Failed to update profile');
       return res.json();
@@ -163,6 +181,17 @@ export default function FarmProfileEdit() {
                       <SelectItem value="both">Both Phone and Email</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="operationalHours">Operational Hours (Optional)</Label>
+                  <Input id="operationalHours" placeholder="e.g., 8:00 AM - 5:00 PM" {...form.register('operationalHours')} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="operationalDays">Days Open (Optional)</Label>
+                  <Input id="operationalDays" placeholder="e.g., Monday, Tuesday, Wednesday, Thursday, Friday" {...form.register('operationalDays')} />
+                  <p className="text-sm text-slate-500">Enter days separated by commas</p>
                 </div>
 
                 {submitError && (
